@@ -1,0 +1,14 @@
+MULTIENV:
+  TARGETS: 'pose'
+  TASKS: 'reach'
+  ROBOTS: 'stick'
+  VARIATIONS: 'stick_0_v1'
+  SEEDS: [0]  
+  
+TEST_ENVS:
+  TARGETS: ''
+  TASKS: ''
+  ROBOTS: ''
+  VARIATIONS: ''
+  SEEDS: []
+

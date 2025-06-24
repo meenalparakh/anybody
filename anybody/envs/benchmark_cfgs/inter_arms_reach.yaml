@@ -1,0 +1,49 @@
+MULTIENV:
+  ROBOTS:
+  - real
+  - real
+  - real
+  - real
+  - real
+  - real
+  - arm_ur5
+  - arm_ur5
+  - simple_bot
+  - simple_bot
+  SEEDS:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  
+  TASKS: reach
+  VARIATIONS:
+  - ur5_stick_v1
+  - kinova_gen3_v1
+  - jaco2_v1
+  - xarm7_v1
+  - lwr_v1
+  - yumi_v1
+  - r18_v1
+  - r92_v1
+  - r64_v1
+  - r6_v1
+TEST_ENVS:
+  ROBOTS:
+  - real
+  SEEDS:
+  - 0
+  
+  TASKS: reach
+  VARIATIONS:
+  - widowx_v1
+
+
+
+PROJECT_NAME: inter_arms_reach           # WandB project name

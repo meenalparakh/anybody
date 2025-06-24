@@ -1,0 +1,24 @@
+EVAL: true
+
+EVAL_CHECKPOINT: LOGS_PATH/path/to/checkpoints/agent.pt
+
+TRAINER:
+  TIMESTEPS: 10000
+  EVAL_TIMESTEPS_INTERVAL: 5000
+  EVAL_TIMESTEPS: 500
+  VIDEO_RENDER: true          # if running headless, need `--enable_cameras` flag.
+
+EXPERIMENT:
+  CHECKPOINT_INTERVAL: 12000  # Skip checkpointing during evaluation
+
+AGENT:
+  EXPERIMENT:
+    WRITE_INTERVAL: 500
+
+CURRICULUM:
+  ACTIVE: false
+
+FORCE_PROBLEM_SPEC_GEN: false
+SEARCH_CHECKPOINT: false
+IS_FINETUNING: false
+EVAL_ON_TEST: false

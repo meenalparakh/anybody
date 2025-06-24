@@ -1,0 +1,60 @@
+# ===========================
+# Logging Configuration
+# ===========================
+# experiment name is "{group_run_name}_{seed}"
+GROUP_RUN_NAME: Tr1-c1-s1-t-nt-h0              # WandB group/run name
+
+# ===========================
+# Environment Settings
+# ===========================
+
+OBSERVATION:
+  MASK_ROBO_MORPH: false
+  PREV_ACTION: false
+  HIGH_DIM: false            # Set to true for high-dimensional point cloud observations
+
+ACTION:
+  DISCRETE: false
+
+# ===========================
+# Training Parameters
+# ===========================
+
+TRAINER:
+  TIMESTEPS: 1_000_000
+
+TRAIN:
+  EPISODE_LENGTH_S: 6.0
+  NUM_ENVS_PER_TASK: 128
+
+SEARCH_CHECKPOINT: false
+RUN_SEED: 42                 # Change to use a different RL seed
+
+# ===========================
+# Agent Configuration
+# ===========================
+
+AGENT_NAME: ppo
+
+AGENT:
+  EMA_CRITIC: true
+  PCGRAD: false
+  SYMLOG_RETURNS: true
+  PPO:
+    MINI_BATCHES: 16
+
+# ===========================
+# Model Architecture
+# ===========================
+
+MODEL:
+  TYPE: transformer
+  TRANSFORMER:
+    DIM_FEEDFORWARD: 512
+    DECODER_DIM: 256
+    N_DECODER_LAYERS: 2
+    NLAYERS: 4
+    NHEAD: 4
+  LIMB_EMBED_SIZE: 64
+  OUTPUT_STD: true
+  TASK_REWEIGHTING: true

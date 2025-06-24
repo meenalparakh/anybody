@@ -1,0 +1,46 @@
+MULTIENV:
+  ROBOTS:
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  SEEDS:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  
+  TASKS: push_simple
+  VARIATIONS:
+  - r33_v1
+  - r24_v1
+  - r87_v1
+  - r38_v1
+  - r52_v1
+  - r86_v1
+  - r30_v1
+  - r37_v1
+  - r18_v1
+  - r16_v1
+TEST_ENVS:
+  ROBOTS:
+  - simple_bot
+  SEEDS:
+  - 0
+  
+  TASKS: push_simple
+  VARIATIONS:
+  - r17_v1
+PROJECT_NAME: intra_simple_bot_push_simple           # WandB project name

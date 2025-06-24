@@ -1,0 +1,54 @@
+# ===========================
+# Logging Configuration
+# ===========================
+GROUP_RUN_NAME: Tr0-c0-s0-nm-h0                 # WandB group/run name
+
+# ===========================
+# Environment Settings
+# ===========================
+
+OBSERVATION:
+  MASK_ROBO_MORPH: false
+  PREV_ACTION: false
+  HIGH_DIM: false            # Set to true for high-dimensional point cloud observations
+
+ACTION:
+  DISCRETE: false
+
+# ===========================
+# Training Parameters
+# ===========================
+
+TRAINER:
+  TIMESTEPS: 1_000_000
+
+TRAIN:
+  EPISODE_LENGTH_S: 6.0
+  NUM_ENVS_PER_TASK: 128
+
+SEARCH_CHECKPOINT: false
+RUN_SEED: 42                 # Change to use a different RL seed
+
+# ===========================
+# Agent Configuration
+# ===========================
+
+AGENT_NAME: ppo
+
+AGENT:
+  EMA_CRITIC: false
+  PCGRAD: false
+  SYMLOG_RETURNS: false
+  PPO:
+    MINI_BATCHES: 8
+
+# ===========================
+# Model Architecture
+# ===========================
+
+MODEL:
+  TYPE: mlp-res
+  MLP:
+    EMBED_DIM: 192
+    N_LAYERS: 3
+  LIMB_EMBED_SIZE: 16

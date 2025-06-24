@@ -1,0 +1,46 @@
+MULTIENV:
+  ROBOTS:
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  SEEDS:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  
+  TASKS: reach
+  VARIATIONS:
+  - r23_v1
+  - r33_v1
+  - r0_v1
+  - r63_v1
+  - r34_v1
+  - r75_v1
+  - r49_v1
+  - r85_v1
+  - r95_v1
+  - r13_v1
+TEST_ENVS:
+  ROBOTS:
+  - simple_bot
+  SEEDS:
+  - 0
+  
+  TASKS: reach
+  VARIATIONS:
+  - r99_v1
+PROJECT_NAME: intra_simple_bot_reach           # WandB project name

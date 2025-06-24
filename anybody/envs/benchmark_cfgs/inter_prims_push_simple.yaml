@@ -1,0 +1,49 @@
+MULTIENV:
+  ROBOTS:
+  - stick
+  - stick
+  - nlink
+  - nlink
+  - prims
+  - prims
+  - prims
+  - prims
+  - prims
+  - prims
+  SEEDS:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  
+  TASKS: push_simple
+  VARIATIONS:
+  - r39_v1
+  - r33_v1
+  - r12_v1
+  - r85_v1
+  - pl4_v1
+  - cy7_v1
+  - cu21_v1
+  - cu18_v1
+  - sp15_v1
+  - sp8_v1
+TEST_ENVS:
+  ROBOTS:
+  - chain
+  - chain
+  SEEDS:
+  - 0
+  - 0
+  
+  TASKS: push_simple
+  VARIATIONS:
+  - chain_2b_4_v1
+  - chain_3b_1_v1
+PROJECT_NAME: inter_prims_push_simple           # WandB project name

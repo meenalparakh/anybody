@@ -1,0 +1,49 @@
+MULTIENV:
+  ROBOTS:
+  - real
+  - real
+  - real
+  - real
+  - real
+  - real
+  - arm_ur5
+  - arm_ur5
+  - simple_bot
+  - simple_bot
+  SEEDS:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  
+  TASKS: push_simple
+  VARIATIONS:
+  - ur5_stick_v1
+  - kinova_gen3_v1
+  - jaco2_v1
+  - xarm7_v1
+  - lwr_v1
+  - yumi_v1
+  - r16_v1
+  - r97_v1
+  - r48_v1
+  - r30_v1
+TEST_ENVS:
+  ROBOTS:
+  - real
+  SEEDS:
+  - 0
+  
+  TASKS: push_simple
+  VARIATIONS:
+  - widowx_v1
+ACTION:
+  DISCRETE: false
+
+PROJECT_NAME: inter_arms_push_simple           # WandB project name

@@ -1,0 +1,47 @@
+MULTIENV:
+  ROBOTS:
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  - simple_bot
+  SEEDS:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  
+  TASKS: reach
+  VARIATIONS:
+  - r79_v2
+  - r59_v2
+  - r83_v2
+  - r78_v2
+  - r29_v2
+  - r11_v2
+  - r93_v2
+  - r56_v2
+  - r75_v2
+  - r12_v2
+TEST_ENVS:
+  ROBOTS:
+  - simple_bot
+  SEEDS:
+  - 0
+  
+  TASKS: reach
+  VARIATIONS:
+  - r53_v2
+
+NUM_GOAL_RANDOMIZATIONS: 1

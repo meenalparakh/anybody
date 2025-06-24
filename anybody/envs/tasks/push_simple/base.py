@@ -1,0 +1,375 @@
+# general script for creating any push task for a given robot
+# also includes multi-robot settings
+import numpy as np
+from numpy.random import uniform as U
+import anybody.envs.tasks.env_utils as eu
+import random
+import trimesh
+from urdfpy import URDF 
+from anybody.utils.collision_utils import get_box_fit, get_cylinder_fit, get_best_fit
+
+
+def get_link_bounding_box(link):
+    """
+    Compute the bounding box of a given URDF link's geometry.
+
+    Args:
+        link (urdfpy.Link): The URDF link.
+
+    Returns:
+        tuple: A tuple containing the extents of the bounding box (width, height, depth).
+    """
+    all_extents = []
+    all_lengths = []
+
+    # Iterate through the link's visuals or collisions
+    for visual in link.visuals:
+        if visual.geometry is not None:
+            # Convert the geometry to a trimesh object
+            if isinstance(visual.geometry, trimesh.base.Trimesh):
+                mesh = visual.geometry
+            else:
+                mesh = visual.geometry.to_trimesh()
+
+            # Compute the bounding box
+            bounding_box = mesh.bounding_box_oriented
+            extents = bounding_box.extents  # Width, height, depth
+            all_extents.append(extents)
+            # assuming diagonal length is the longest
+            all_lengths.append(np.linalg.norm(extents))
+
+    # Return the largest bounding box extents
+    # if all_extents:
+    #     return max(all_extents, key=lambda x: x.prod())  # Largest by volume
+    if all_lengths:
+        return max(all_lengths)  # Largest by diagonal length
+    else:
+        return None
+    
+    
+def get_robot_reach(robo_type, robo_name):
+    robo: eu.Robot = eu.get_robot(robo_type=robo_type, robo_fname=robo_name, robo_id=0)
+    robo_urdfpy = URDF.load(robo.robot_urdf)
+    
+    
+    fk = robo_urdfpy.collision_trimesh_fk()
+
+    all_lengths = []
+    for idx, (mesh, pose) in enumerate(fk.items()):
+        _, box_dim = get_box_fit(mesh)
+        max_len = max(box_dim)
+        all_lengths.append(max_len)
+        
+    # all_links = robo_urdfpy.links
+    # # get the longest robot link
+    
+    # all_lengths = []
+    # for link in all_links:
+    #     max_len = get_link_bounding_box(link)
+    #     if max_len is not None:
+    #         all_lengths.append(max_len)
+            
+    cum_length = sum(all_lengths)
+    return cum_length # max possible - though actually the reach should be less than this
+                    
+
+# the push envs for simple robot - would involve cube pushing on a planar surface that may be tilted
+def get_base_env(robo_type, robo_name, n_obs, n_blocks, seed=0, version_name='v1', save_dirname=None, save_fname=None):
+    np.random.seed(seed)
+    random.seed(seed)
+
+    robot = eu.get_robot(robo_type=robo_type, robo_fname=robo_name, robo_id=0)
+    robo_dict = {robot.robot_id: robot}
+
+    joint_names = robot.act_info["joint_names"]
+    joint_lb = robot.act_info["joint_lb"]
+    joint_ub = robot.act_info["joint_ub"]
+
+
+    max_tries = 100
+    env_found = False
+    
+    init_x_range = [-0.2, -0.15]
+    
+    if robo_type in ["arm_ur5", "arm_ed", "simple_bot", "nlink", "planar_arm", "mf_arm", "real", "panda_variations"]:
+        _robo_reach = get_robot_reach(robo_type, robo_name) 
+        if robo_type in ["real", "panda_variations"]:
+            _robo_reach *= 0.75 
+        y_range = [_robo_reach * 0.4, _robo_reach * 0.6]
+        block_shape_bounds = np.array([[0.15, 0.15, 0.15], [0.2, 0.2, 0.2]]) * _robo_reach
+
+    elif robo_type in ["chain", "prims", "cubes"]:
+        y_range = [-0.2, 0.2]
+        block_shape_bounds = np.array([[0.15, 0.15, 0.15], [0.2, 0.2, 0.2]])
+        _robo_reach = 1.0
+    else:
+        y_range = [0.2, 0.4]
+        block_shape_bounds = np.array([[0.15, 0.15, 0.15], [0.2, 0.2, 0.2]])
+        _robo_reach = 1.0
+        
+    obst_shape_bounds = np.array([[0.06, 0.06, 0.06], [0.15, 0.15, 0.15]]) * _robo_reach
+
+    
+    # if robo_type == 'arm_ur5':
+    #     # need to be a little further away from the robot
+    #     y_range = [0.4, 0.7]
+    # elif robo_type == 'mf_arm':
+    #     y_range = [0.2, 0.4]
+    # elif robo_type == 'simple_bot':
+    #     y_range = [0.3, 0.5]
+    # elif robo_type == 'prims':
+    #     y_range = [-0.2, 0.2]
+    # elif robo_type == 'cubes':
+    #     y_range = [-0.2, 0.2]    
+    # elif robo_type == "real":
+    #     y_range = [0.4, 0.6]
+    # else:
+    #     y_range = [0.2, 0.4]
+
+
+    for _ in range(max_tries):
+        # the robot is at 0, 0, 0
+        z_ground = U(-0.2, -0.00)
+
+        obst_pos_bounds = np.array([[-0.5, -0.0, -0.2], [0.5, 0.5, 0.5]])
+
+        block_pos_bounds = np.array([[-0.5, 0.1, 0.0], [0.5, 0.5, 1.0]])
+        
+        # block_pos_bounds_init = np.array([[init_x_range[0], y_range[0], 0.0], [init_x_range[1], y_range[1], 1.0]]) 
+        block_pos_bounds_init = np.array([[y_range[0], init_x_range[0], 0.0], [y_range[1], init_x_range[1], 1.0]]) 
+        block_pos_bounds_goal = np.array([[y_range[0], 0.4, 0.0], [y_range[1], 0.6, 1.0]])
+        # block_pos_bounds_goal = np.array([[0.4, y_range[0], 0.0], [0.6, y_range[1], 1.0]])
+
+        obstacle_dict = {}
+
+        # add obstacles
+        for idx in range(n_obs):
+            p1 = np.eye(4)
+            p1[:3, 3] = U(obst_pos_bounds[0], obst_pos_bounds[1])
+            cuboid1 = eu.Prim(
+                obj_type="box",
+                obj_id=idx + 1,
+                obj_shape=U(obst_shape_bounds[0], obst_shape_bounds[1]).tolist(),
+                pose=p1,
+                static=True,
+                friction=0.8,
+            )
+            obstacle_dict[cuboid1.obj_id] = cuboid1
+
+        # initialize collision manager
+        collision_manager = trimesh.collision.CollisionManager()
+        for obj_id, obj in obstacle_dict.items():
+            collision_manager.add_object(
+                f"obstacle_{obj_id}", obj.mesh, transform=obj.pose
+            )
+
+        block_dict = {}
+        # add blocks that do not collide with obstacles
+        for idx in range(n_blocks):
+            for _ in range(100):
+                block_shape = U(block_shape_bounds[0], block_shape_bounds[1])
+                block = eu.Prim(
+                    obj_type="box",
+                    obj_id=n_obs + 1 + idx,
+                    obj_shape=block_shape.tolist(),
+                    pose=np.eye(4),
+                    static=False,
+                )
+
+                p = np.eye(4)
+                p[:3, 3] = U(block_pos_bounds_init[0], block_pos_bounds_init[1])
+                # p[:3, :3] = trimesh.transformations.random_rotation_matrix()
+                p[2, 3] = z_ground + block_shape[2] / 2 + 0.001
+
+                dist = collision_manager.min_distance_single(block.mesh, transform=p)
+
+                is_collision = dist < 0.0
+                if not is_collision:
+                    block.pose = p
+                    block_dict[block.obj_id] = block
+
+                    collision_manager.add_object(
+                        f"block_{idx}", block.mesh, transform=block.pose
+                    )
+                    break
+
+        if len(block_dict) == 0:
+            continue
+
+        all_obs = {**obstacle_dict, **block_dict}
+
+        found = False
+        all_obs["ground"] = eu.add_ground_prim(z_ground, obj_id=n_obs + n_blocks + 2)
+        for _ in range(100):
+            init_jpos = U(joint_lb, joint_ub)
+            # init_jpos[-2:] = -init_jpos[-4:-2]
+            is_collision = eu.check_collision(
+                robot, dict(zip(joint_names, init_jpos)), all_obs, view=False
+            )
+            if not is_collision:
+                found = True
+                break
+        # found 'init_jpos'
+
+        if not found:
+            continue
+
+        # found a target block positions
+        target_block_pos = {}
+        collision_manager = trimesh.collision.CollisionManager()
+        for obs_id, obst in obstacle_dict.items():
+            collision_manager.add_object(
+                f"obstacle_{obs_id}", obst.mesh, transform=obst.pose
+            )
+
+        block_goals_found = True
+        for block_id, block in block_dict.items():
+            found = False
+            for k in range(100):
+                p = np.eye(4)
+                p[:3, 3] = U(block_pos_bounds_goal[0], block_pos_bounds_goal[1])
+                p[2, 3] = z_ground + block_shape[2] / 2 + 0.001
+
+                dist = collision_manager.min_distance_single(block.mesh, transform=p)
+                is_collision = dist < 0.0
+                if not is_collision:
+                    target_block_pos[block_id] = p
+                    collision_manager.add_object(
+                        f"block_{block_id}", block.mesh, transform=p
+                    )
+                    found = True
+                    break
+            if not found:
+                block_goals_found = False
+                break
+
+        if not block_goals_found:
+            continue
+
+        env_found = True
+        break
+
+    if not env_found:
+        return None
+
+    init_robo_state_dict = {
+        robot.robot_id: eu.RobotState(joint_pos=dict(zip(joint_names, init_jpos)))
+    }
+    goal_obj_state_dict = {k: eu.PrimState(pose=v) for k, v in target_block_pos.items()}
+    init_obj_state_dict = {
+        obj_id: eu.PrimState(pose=obj.pose) for obj_id, obj in block_dict.items()
+    }
+
+
+
+    def obj_sampler(_block_pos_bounds_init, _block_pos_bounds_goal, obstacle_bounds, flag="init"):
+        
+        if flag == "init":
+            _p = np.eye(4)
+            _p[:3, 3] = U(_block_pos_bounds_init[0], _block_pos_bounds_init[1])
+            return _p
+        
+        if flag == "goal":
+            _p = np.eye(4)
+            _p[:3, 3] = U(_block_pos_bounds_goal[0], _block_pos_bounds_goal[1])
+            return _p
+        
+        _p = trimesh.transformations.random_rotation_matrix()
+        _p[:3, 3] = U(obstacle_bounds[0], obstacle_bounds[1])
+
+        return _p
+            
+        
+        
+    def robo_jpos_sampler(joint_lb, joint_ub):
+        return U(joint_lb, joint_ub)
+
+    def get_cfg_fn():
+        return eu.get_randomized_push_simple_cfg(
+            obstacle_dict,
+            movable_obj_dict=block_dict,
+            robot_dict=robo_dict,
+            obj_sampler=obj_sampler,
+            robot_sampler=robo_jpos_sampler,
+            z_ground=z_ground,
+            obj_sampler_args=[block_pos_bounds_init, block_pos_bounds_goal, obst_pos_bounds],
+            robo_sampler_args=[joint_lb, joint_ub],
+        )
+
+    cfg_name = eu.save_randomized_configs(
+        robo_dict=robo_dict,
+        get_cfg_fn=get_cfg_fn,
+        task_type="push_simple",
+        robo_type=robo_type,
+        robo_name=robo_name,
+        variation=version_name,
+        seed=seed,
+        save_dirname=save_dirname,
+        save_fname=save_fname,
+    )
+
+
+    # remove ground
+    all_obs.pop("ground")
+
+    return eu.ProblemSpec(
+        robot_dict=robo_dict,
+        obj_dict=all_obs,
+        init_robo_state_dict=init_robo_state_dict,
+        goal_robo_state_dict={r.robot_id: eu.RobotState() for r in robo_dict.values()},
+        init_obj_state_dict=init_obj_state_dict,
+        goal_obj_state_dict=goal_obj_state_dict,
+        ground=z_ground,
+        additional_configs=cfg_name,
+    )
+
+
+def get_v1_env(robo_type, robo_name, seed=0, save_dirname=None, save_fname=None):
+    return get_base_env(robo_type, robo_name, n_obs=0, n_blocks=1, seed=seed, version_name='v1', save_dirname=save_dirname, save_fname=save_fname)
+
+
+def get_v2_env(robo_type, robo_name, seed=0, save_dirname=None, save_fname=None):
+    # n_blocks = np.random.randint(1, 5)
+    n_blocks = 1
+    return get_base_env(robo_type, robo_name, n_obs=1, n_blocks=n_blocks, seed=seed, version_name='v2', save_dirname=save_dirname, save_fname=save_fname)
+
+def get_v3_env(robo_type, robo_name, seed=0, save_dirname=None, save_fname=None):
+    # n_blocks = np.random.randint(1, 5)
+    n_obs = np.random.randint(1, 3)
+    return get_base_env(robo_type, robo_name, n_obs=n_obs, n_blocks=1, seed=seed, version_name='v3', save_dirname=save_dirname, save_fname=save_fname)
+
+
+##### pose envs for push task does not make sense
+# as there is no target pose for the robots
+# but still implemented for consistency
+# in future, we may want to directly allow for ee_control
+
+
+def get_v1_pose_env(robo_type, robo_fname, seed, save_dirname=None, save_fname=None):
+    return eu.get_pose_env(get_v1_env, robo_type, robo_fname, seed, save_dirname=save_dirname, save_fname=save_fname)
+
+def get_v2_pose_env(robo_type, robo_fname, seed, save_dirname=None, save_fname=None):
+    return eu.get_pose_env(get_v2_env, robo_type, robo_fname, seed, save_dirname=save_dirname, save_fname=save_fname)
+
+def get_v3_pose_env(robo_type, robo_fname, seed, save_dirname=None, save_fname=None):
+    return eu.get_pose_env(get_v3_env, robo_type, robo_fname, seed, save_dirname=save_dirname, save_fname=save_fname)
+
+
+
+bot_joint_envs = {
+    "v1": get_v1_env,
+    "v2": get_v2_env,
+    "v3": get_v3_env,
+}
+
+bot_pose_envs = {
+    "v1": get_v1_pose_env,
+    "v2": get_v2_pose_env,
+    "v3": get_v3_pose_env,
+}
+
+
+envs = {
+    "joint": bot_joint_envs,
+    "pose": bot_pose_envs,
+}

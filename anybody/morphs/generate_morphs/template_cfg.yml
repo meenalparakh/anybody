@@ -1,0 +1,38 @@
+##
+## Copyright (c) 2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+##
+## NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+## property and proprietary rights in and to this material, related
+## documentation and any modifications thereto. Any use, reproduction,
+## disclosure or distribution of this material and related documentation
+## without an express license agreement from NVIDIA CORPORATION or
+## its affiliates is strictly prohibited.
+##
+
+robot_cfg:
+    kinematics:
+        use_usd_kinematics: True
+        isaac_usd_path: ""
+        usd_path: "USDPATH"
+        usd_robot_root: "/USDROBOTROOT"
+
+        urdf_path: "URDFPATH"
+        asset_root_path: "ASSETROOTPATH"
+        base_link: "BASELINK"
+        ee_link: "EELINK"
+        collision_link_names: [COLLISIONLINKNAMES]
+        collision_spheres: "COLLISIONSPHERESFILE"
+        collision_sphere_buffer: 0.004 # 0.0025
+        # extra_collision_spheres: {"attached_object": 4}
+        use_global_cumul: True
+        self_collision_ignore: SELFCOLLISIONIGNORE
+        self_collision_buffer: SELFCOLLISIONBUFFER
+        #link_names: ["panda_link4"]
+        mesh_link_names: [MESHLINKNAMES]
+        cspace:
+            joint_names: [JOINTNAMES]
+            retract_config: [RETRACTCONFIG]
+            null_space_weight: [NULLSPACEWEIGHT]
+            cspace_distance_weight: [CSPACEDISTANCEWEIGHT]
+            max_acceleration: 15.0
+            max_jerk: 500.0

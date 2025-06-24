@@ -1,0 +1,47 @@
+MULTIENV:
+  ROBOTS:
+  - prims
+  - prims
+  - prims
+  - prims
+  - prims
+  - prims
+  - prims
+  - real
+  - real
+  - real
+  SEEDS:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  
+  TASKS: reach
+  VARIATIONS:
+  - pl5_v1
+  - pl2_v1
+  - pl0_v1
+  - cy16_v1
+  - cy2_v1
+  - cy1_v1
+  - cy7_v1
+  - ur5_planar_v1
+  - ur5_ez_v1
+  - ur5_sawyer_v1
+TEST_ENVS:
+  ROBOTS:
+  - real
+  SEEDS:
+  - 0
+  
+  TASKS: reach
+  VARIATIONS:
+  - ur5_stick_v1
+
+PROJECT_NAME: inter_ee_arm_reach           # WandB project name

@@ -1,0 +1,38 @@
+MULTIENV:
+  ROBOTS:
+  - prims
+  - prims
+  - prims
+  - real
+  SEEDS:
+  - 0
+  - 0
+  - 0
+  - 0
+  TARGETS:
+  - joint
+  - joint
+  - joint
+  - pose
+  TASKS:
+  - push_simple
+  - push_simple
+  - push_simple
+  - reach
+  VARIATIONS:
+  - pl5_v1
+  - pl2_v1
+  - pl23_v1
+  - ur5_stick_v1
+TEST_ENVS:
+  ROBOTS:
+  - real
+  SEEDS:
+  - 0
+  TARGETS:
+  - joint
+  TASKS:
+  - push_simple
+  VARIATIONS:
+  - ur5_planar_v1
+PROJECT_NAME: inter_task_ur5           # WandB project name

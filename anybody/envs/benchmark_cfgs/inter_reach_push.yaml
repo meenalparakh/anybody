@@ -1,0 +1,26 @@
+MULTIENV:
+  ROBOTS:
+  - prims
+  - real
+  SEEDS:
+  - 0
+  - 0
+  TARGETS:
+  - joint
+  - pose
+  TASKS:
+  - push_simple
+  - reach
+  VARIATIONS:
+  - pl10_v1
+  - ur5_stick_v1
+TEST_ENVS:
+  ROBOTS:
+  - real
+  SEEDS:
+  - 0
+  
+  TASKS: push_simple
+  VARIATIONS:
+  - ur5_planar_v1
+PROJECT_NAME: inter_reach_push           # WandB project name

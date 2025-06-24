@@ -1,0 +1,47 @@
+MULTIENV:
+  ROBOTS:
+  - panda_variations
+  - panda_variations
+  - panda_variations
+  - panda_variations
+  - panda_variations
+  - panda_variations
+  - panda_variations
+  - panda_variations
+  - panda_variations
+  - panda_variations
+  SEEDS:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  
+  TASKS: reach
+  VARIATIONS:
+  - panda_0_v1
+  - panda_1_v1
+  - panda_2_v1
+  - panda_3_v1
+  - panda_4_v1
+  - panda_5_v1
+  - panda_6_v1
+  - panda_7_v1
+  - panda_8_v1
+  - panda_9_v1
+TEST_ENVS:
+  ROBOTS:
+  - real
+  SEEDS:
+  - 0
+  
+  TASKS: reach
+  VARIATIONS:
+  - panda_v1
+
+PROJECT_NAME: intra_panda_reach           # WandB project name

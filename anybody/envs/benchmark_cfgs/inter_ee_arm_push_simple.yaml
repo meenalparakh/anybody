@@ -1,0 +1,47 @@
+MULTIENV:
+  ROBOTS:
+  - prims
+  - prims
+  - prims
+  - prims
+  - prims
+  - prims
+  - prims
+  - real
+  - real
+  - real
+  SEEDS:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  
+  TASKS: push_simple
+  VARIATIONS:
+  - pl2_v1
+  - pl5_v1
+  - pl22_v1
+  - cy10_v1
+  - cy18_v1
+  - cy15_v1
+  - cy9_v1
+  - ur5_planar_v1
+  - ur5_ez_v1
+  - ur5_sawyer_v1
+TEST_ENVS:
+  ROBOTS:
+  - real
+  SEEDS:
+  - 0
+  
+  TASKS: push_simple
+  VARIATIONS:
+  - ur5_stick_v1
+
+PROJECT_NAME: inter_ee_arm_push_simple           # WandB project name

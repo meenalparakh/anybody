@@ -1,0 +1,61 @@
+# ===========================
+# Experiment Specific Configuration
+# ===========================
+
+# # define the env config, experiment and project name via commandline arguments, such as
+# <...> SE_TASK arm_ur5/r40_v1/reach EXPERIMENT_NAME: arm_ur5-r40_v1-reach PROJECT_NAME: inter_arms_reach
+
+# ===========================
+# Logging Configuration
+# ===========================
+GROUP_RUN_NAME: Ind                           # WandB group/run name
+
+# ===========================
+# Environment Settings
+# ===========================
+
+OBSERVATION:
+  MASK_ROBO_MORPH: true
+  PREV_ACTION: false
+  HIGH_DIM: false            # Set to true for high-dimensional point cloud observations
+
+ACTION:
+  DISCRETE: false
+
+# ===========================
+# Training Parameters
+# ===========================
+
+TRAINER:
+  TIMESTEPS: 1_000_000
+
+TRAIN:
+  EPISODE_LENGTH_S: 6.0
+  NUM_ENVS_PER_TASK: 1280
+
+SEARCH_CHECKPOINT: false
+RUN_SEED: 42                 # Change to use a different RL seed
+
+# ===========================
+# Agent Configuration
+# ===========================
+
+AGENT_NAME: ppo
+
+AGENT:
+  EMA_CRITIC: true
+  PCGRAD: false
+  SYMLOG_RETURNS: true
+  PPO:
+    MINI_BATCHES: 8
+
+# ===========================
+# Model Architecture
+# ===========================
+
+MODEL:
+  TYPE: mlp-res
+  MLP:
+    EMBED_DIM: 192
+    N_LAYERS: 3
+  LIMB_EMBED_SIZE: 16
