@@ -2,7 +2,7 @@
 
 This repository contains code for the [AnyBody benchmark suite](https://arxiv.org/abs/2505.14986). It includes a configurable robot set, standardized benchmark scenarios, and training pipelines for RL algorithms. The benchmark is based on [NVIDIA Isaac Sim](https://developer.nvidia.com/isaac-sim). 
 
-This repository includes:
+Usage:
 
 * [**Installation**](docs/installation.md)
 * [**Benchmark**](docs/benchmark.md)
