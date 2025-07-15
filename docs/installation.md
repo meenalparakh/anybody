@@ -1,6 +1,6 @@
 ## 📦 Installation
 
-This benchmark uses [MT-Isaaclab](https://github.com/princeton-vl/MT-IsaacLab/tree/develop), a multi-task learning framework built on top of [Isaac Lab](https://isaac-sim.github.io/IsaacLab/main/index.html).
+This benchmark uses [MT-Isaaclab](https://github.com/meenalparakh/MT-IsaacLab/tree/develop), a multi-task learning framework built on top of [Isaac Lab](https://isaac-sim.github.io/IsaacLab/main/index.html).
 
 ### Prerequisites
 
