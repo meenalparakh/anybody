@@ -36,7 +36,6 @@ morph_generator_dict = {
 }
 
 real_robo_names = [
-    "fetch",
     "jaco2",
     "kinova_gen3",
     "widowx",

@@ -107,6 +107,6 @@ def create_real_robot_usd_helper(
         from anybody.utils.to_usd import ArgsCli, main
 
         args_cli = ArgsCli(
-            input=str(new_urdf_path), output=str(usd_path), headless=True
+            input=str(new_urdf_path), output=str(usd_path)
         )
         main(args_cli)

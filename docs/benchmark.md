@@ -4,7 +4,7 @@
 ### Robot Set
 
 1. **Download Robot Morphologies**  
-  Download the robot morphologies for the AnyBody benchmark (as used in the [paper](http://arxiv.org/abs/2505.14986)) from [this link](https://drive.google.com/file/d/1YmtDxPNNHh_k0Xzk4MxBB0nJWIx6Z_EI/view?usp=sharing).
+  Download the robot morphologies for the AnyBody benchmark (as used in the [paper](http://arxiv.org/abs/2505.14986)) from [this link](https://drive.google.com/file/d/1k59bLm51ZbxWC1tG5MG0OFndWgGV49IS/view?usp=sharing).
 
 2. **Place Morphologies**  
   Extract and place the downloaded morphologies in the `anybody/morphs/robots/` directory. The structure should look like:
@@ -53,7 +53,7 @@
   To visualize morphologies using Meshcat (ensure `meshcat-server` is running):
 
   ```bash
-  python source/ua_bench/bench/create_morphs/view_real.py <robo-cat> <robo-name>
+  python scripts/env_utils/view_morph.py <robo-cat> <robo-name>
   ```
 
   Replace `<robo-cat>` and `<robo-name>` with the desired category and robot name.
