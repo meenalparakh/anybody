@@ -87,6 +87,43 @@ class EventCfg:
     """Configuration for events."""
 
     def __init__(self, prob: eu.ProblemSpec):
+        
+        for robo_id, robo in prob.robot_dict.items():
+            self.__setattr__(
+                f"robot_{robo_id}_physics_material",
+                EventTerm(
+                    func=mdp.randomize_rigid_body_material,
+                    mode="startup",
+                    params={
+                        "asset_cfg": SceneEntityCfg(f"robot_{robo_id}",
+                                    body_names=[".*"]),
+                        "static_friction_range": (1.00, 1.5),
+                        "dynamic_friction_range": (0.8, 1.5),
+                        "restitution_range": (0.0, 0.0),
+                        "num_buckets": 16,
+                    },
+                )
+            )
+            
+            # also randomize the joint parameters
+            self.__setattr__(
+                f"robot_{robo_id}_joint_parameters",
+                EventTerm(
+                    func=mdp.randomize_joint_parameters,
+                    mode="reset",
+                    params={
+                        "asset_cfg": SceneEntityCfg(f"robot_{robo_id}", joint_names=".*"),
+                        "friction_distribution_params": (0.00, 0.1),
+                        "armature_distribution_params": (0.00, 0.01),
+                        "lower_limit_distribution_params": (0.00, 0.01),
+                        "upper_limit_distribution_params": (0.00, 0.01),
+                        "operation": "add",
+                        "distribution": "gaussian",
+                    },
+                )
+            )
+            
+            
         if (prob.additional_configs is not None) and (not cfg.FIXED_INITIAL_STATE):
             # load the additional configs
             configs = load_pickle(get_problem_spec_dir() / prob.additional_configs)
@@ -187,3 +224,4 @@ class EventCfg:
                     params=event_term_params,
                 ),
             )
+            

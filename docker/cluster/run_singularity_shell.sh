@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-echo "(run_singularity.py): Called on compute node with wandb key"
+echo "(run_singularity.py): Called on compute node"
 
 #==
 # Helper functions
@@ -97,6 +97,7 @@ tar -xf $CLUSTER_SIF_PATH/isaac-lab-anybody.tar  -C $WORK_DIR
 # execute command in singularity container
 # NOTE: ISAACLAB_PATH is normally set in `isaaclab.sh` but we directly call the isaac-sim python because we sync the entire
 # Isaac Lab directory to the compute node and remote the symbolic link to isaac-sim
+wandb_key=$(grep -A 2 "api.wandb.ai" ~/.netrc | grep password | awk '{print $2}')
 
 singularity_cmd=(
     singularity shell
@@ -122,7 +123,7 @@ singularity_cmd=(
     --env CHECK_OVERHEAT_FOLDER="/workspace/check_overheat" 
     --env ISAACLAB_PATH=/workspace/anybody/isaaclab 
     --env PROJECT_PATH=/workspace/anybody 
-    --env WANDB_API_KEY=$1
+    --env WANDB_API_KEY=$wandb_key
     --pwd /workspace/anybody
     --nv --containall 
 )

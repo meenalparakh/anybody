@@ -57,8 +57,7 @@ To test the image interactively on the cluster:
 2. Run:
 
   ```bash
-  # wandb key needed only for run.py script
-  ./docker/cluster/run_singularity_shell.sh <WANDB_API_KEY>
+  ./docker/cluster/run_singularity_shell.sh
   ```
 
 3. In the Apptainer shell:
@@ -76,13 +75,13 @@ To test the image interactively on the cluster:
 To submit a batch job with Slurm from the `anybody` directory on the cluster, use:
 
 ```bash
-./docker/cluster/submit_job_slurm.sh <slurm_job_name> /path/on/cluster/to/anybody <WANDB_API_KEY> <all arguments for run.py script>
+./docker/cluster/submit_job_slurm.sh <slurm_job_name> /path/on/cluster/to/anybody scripts/run.py <all arguments for run.py script>
 ```
 
 **Example:**
 
 ```bash
-./docker/cluster/submit_job_slurm.sh <slurm_job_name> /path/on/cluster/to/anybody <WANDB_API_KEY> --headless BENCHMARK_TASK intra_simple_bot_reach OVERRIDE_CFGNAME experiment_cfgs/mt_mlp_reach.yaml
+./docker/cluster/submit_job_slurm.sh <slurm_job_name> /path/on/cluster/to/anybody scripts/run.py --headless BENCHMARK_TASK intra_simple_bot_reach OVERRIDE_CFGNAME experiment_cfgs/mt_mlp_reach.yaml
 ```
 
 ---

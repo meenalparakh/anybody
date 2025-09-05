@@ -208,3 +208,5 @@ scripts/plot_utils
 old_readme.md
 figures/*
 slurm
+sync.sh
+docker/cluster/submit_job_ion.sh

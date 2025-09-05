@@ -6,8 +6,8 @@
 # to run this script, provide the following arguments:
 # 1. task name (e.g., "train")
 # 2. path to the anybody directory (e.g., "/home/user/anybody")
-# 3. wandb key
-# 4. arguments for the script "scripts/run.py"
+# 3. the script to run
+# 4. arguments for the script 
 
 # create job script with compute demands
 ### MODIFY HERE FOR YOUR JOB ###
@@ -24,7 +24,7 @@ cat <<EOT > slurm/job_$1.sh
 #SBATCH --output=slurm/outputs/$1_%j.txt \
 
 
-bash "$2/docker/cluster/run_singularity.sh" "$3" "${@:4}"
+bash "$2/docker/cluster/run_singularity.sh"  "$3" "${@:4}"
 EOT
 
 sbatch < slurm/job_$1.sh

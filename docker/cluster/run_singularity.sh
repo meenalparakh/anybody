@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-echo "(run_singularity.py): Called on compute node from current isaaclab directory wandb key and arguments ${@:2}"
+echo "(run_singularity.py): Called on compute node from current isaaclab directory, $1: the script to run with arguments ${@:2}"
 
 #==
 # Helper functions
@@ -98,6 +98,7 @@ tar -xf $CLUSTER_SIF_PATH/isaac-lab-anybody.tar  -C $WORK_DIR
 # execute command in singularity container
 # NOTE: ISAACLAB_PATH is normally set in `isaaclab.sh` but we directly call the isaac-sim python because we sync the entire
 # Isaac Lab directory to the compute node and remote the symbolic link to isaac-sim
+wandb_key=$(grep -A 2 "api.wandb.ai" ~/.netrc | grep password | awk '{print $2}')
 
 singularity_cmd=(
     singularity exec
@@ -123,7 +124,7 @@ singularity_cmd=(
     --env CHECK_OVERHEAT_FOLDER="/workspace/check_overheat" 
     --env ISAACLAB_PATH=/workspace/anybody/isaaclab 
     --env PROJECT_PATH=/workspace/anybody 
-    --env WANDB_API_KEY=$1
+    --env WANDB_API_KEY=$wandb_key
     --nv --containall
 )
 
@@ -136,7 +137,7 @@ fi
 # Add the SIF file and the command to run
 
 singularity_cmd+=("$WORK_DIR/isaac-lab-anybody.sif")
-singularity_cmd+=("bash" "-c" "cd /workspace/anybody && /isaac-sim/python.sh ${CLUSTER_PYTHON_EXECUTABLE} ${@:2}")
+singularity_cmd+=("bash" "-c" "cd /workspace/anybody && /isaac-sim/python.sh $1 ${@:2}")
 
 # copy resulting cache files back to host
 # rsync -azPv $WORK_DIR/docker-isaac-sim $CLUSTER_ISAAC_SIM_CACHE_DIR/..
