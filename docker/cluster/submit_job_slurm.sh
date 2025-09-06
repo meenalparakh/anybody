@@ -24,7 +24,7 @@ cat <<EOT > slurm/job_$1.sh
 #SBATCH --output=slurm/outputs/$1_%j.txt \
 
 
-bash "$2/docker/cluster/run_singularity.sh"  "$3" "${@:4}"
+bash "$2/docker/cluster/run_singularity.sh" "$3" "${@:4}"
 EOT
 
 sbatch < slurm/job_$1.sh

@@ -41,7 +41,8 @@ AGENT:
   SYMLOG_RETURNS: false
   PPO:
     MINI_BATCHES: 8
-
+  TASK_REWEIGHTING: true
+  
 # ===========================
 # Model Architecture
 # ===========================

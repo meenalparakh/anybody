@@ -167,6 +167,8 @@ if __name__ == "__main__":
         cfg_names = json.load(f)
                 
     # cfg_names = ["inter_arms_reach_v2", "inter_arms_push_simple_v2"]
+    if cfg.BENCHMARK_TASK is not None:
+        cfg_names = [cfg.BENCHMARK_TASK]
                 
     for cfg_name in cfg_names:
         print(f"Generating problem specs for {cfg_name} ############################")

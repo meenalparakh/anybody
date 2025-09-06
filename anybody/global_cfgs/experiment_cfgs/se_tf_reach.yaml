@@ -8,7 +8,7 @@
 # ===========================
 # Logging Configuration
 # ===========================
-GROUP_RUN_NAME: Ind                           # WandB group/run name
+GROUP_RUN_NAME: IndTf                           # WandB group/run name
 
 # ===========================
 # Environment Settings
@@ -27,7 +27,7 @@ ACTION:
 # ===========================
 
 TRAINER:
-  TIMESTEPS: 1_000_000
+  TIMESTEPS: 200_000
 
 TRAIN:
   EPISODE_LENGTH_S: 6.0
@@ -54,8 +54,12 @@ AGENT:
 # ===========================
 
 MODEL:
-  TYPE: mlp-res
-  MLP:
-    EMBED_DIM: 192
-    N_LAYERS: 3
-  LIMB_EMBED_SIZE: 16
+  TYPE: transformer
+  TRANSFORMER:
+    DIM_FEEDFORWARD: 512
+    DECODER_DIM: 256
+    N_DECODER_LAYERS: 2
+    NLAYERS: 4
+    NHEAD: 4
+  LIMB_EMBED_SIZE: 64
+  OUTPUT_STD: true

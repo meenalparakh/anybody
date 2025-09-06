@@ -209,4 +209,5 @@ old_readme.md
 figures/*
 slurm
 sync.sh
-docker/cluster/submit_job_ion.sh
+docker/cluster/submit_job_ionic.sh
+docker/cluster/submit_job_neuronic.sh

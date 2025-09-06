@@ -76,6 +76,8 @@ def import_overheat_module():
     return None
     
 
+def get_experiment_scripts_dir():
+    return get_src() / "run_experiments"
 
 def get_wandb_fname():
     path1 = get_src().parents[0] / "wandb" / "wandb_key.txt"
