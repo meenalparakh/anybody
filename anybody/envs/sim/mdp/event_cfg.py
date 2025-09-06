@@ -106,22 +106,22 @@ class EventCfg:
             )
             
             # also randomize the joint parameters
-            self.__setattr__(
-                f"robot_{robo_id}_joint_parameters",
-                EventTerm(
-                    func=mdp.randomize_joint_parameters,
-                    mode="reset",
-                    params={
-                        "asset_cfg": SceneEntityCfg(f"robot_{robo_id}", joint_names=".*"),
-                        "friction_distribution_params": (0.00, 0.1),
-                        "armature_distribution_params": (0.00, 0.01),
-                        "lower_limit_distribution_params": (0.00, 0.01),
-                        "upper_limit_distribution_params": (0.00, 0.01),
-                        "operation": "add",
-                        "distribution": "gaussian",
-                    },
-                )
-            )
+            # self.__setattr__(
+            #     f"robot_{robo_id}_joint_parameters",
+            #     EventTerm(
+            #         func=mdp.randomize_joint_parameters,
+            #         mode="reset",
+            #         params={
+            #             "asset_cfg": SceneEntityCfg(f"robot_{robo_id}", joint_names=".*"),
+            #             "friction_distribution_params": (0.00, 0.1),
+            #             "armature_distribution_params": (0.00, 0.01),
+            #             "lower_limit_distribution_params": (0.00, 0.01),
+            #             "upper_limit_distribution_params": (0.00, 0.01),
+            #             "operation": "add",
+            #             "distribution": "gaussian",
+            #         },
+            #     )
+            # )
             
             
         if (prob.additional_configs is not None) and (not cfg.FIXED_INITIAL_STATE):

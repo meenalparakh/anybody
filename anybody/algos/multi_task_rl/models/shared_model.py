@@ -29,6 +29,8 @@ def get_policy_network(net_out_dim=1):
     output_tanh = cfg.ACTION.ABSOLUTE
     
     if cfg.MODEL.TYPE in ["transformer", "mixed"]:
+        if cfg.MODEL.OUTPUT_STD:
+            net_out_dim *= 2
         mu_net = TransformerModel(
             net_out_dim, only_limbs=True, n_robots=n_robots, output_tanh=output_tanh
         )

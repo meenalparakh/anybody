@@ -620,9 +620,19 @@ class MultiEnvPPO(PPO):
             ):
                 # the targets should be computed using the EMA parameters
 
+                for k, v in states.items():
+                    if torch.isnan(v).any():
+                        import pdb; pdb.set_trace()
+                        
+                for k, v in next_states.items():
+                    if torch.isnan(v).any():
+                        import pdb; pdb.set_trace()
+
+
                 if global_cfg.AGENT.EMA_CRITIC:
                     values, _, _ = self._slow_value.act(
-                        {"states": self._state_preprocessor(next_states)}, role="value"
+                        # {"states": self._state_preprocessor(next_states)}, role="value"
+                        {"states": self._state_preprocessor(states)}, role="value"
                     )
                 else:
                     values, _, _ = self.value.act(

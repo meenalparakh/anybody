@@ -775,7 +775,8 @@ def encoded_joint_pos_batched(
     # we want to encode each joint value with the given frequencies
     # the frequencies have shape: (num_freqs,)
     # the returned values should have shape: (num_envs, num_joints, num_freqs * 2)
-    
+    if torch.isnan(jvals).any():
+        import pdb; pdb.set_trace()
     
     if global_cfg.OBSERVATION.JOINT_VALUE_ENCODER.TYPE == 'sinusoidal':
         frequencies = frequencies.view(1, 1, -1).to(
@@ -811,7 +812,7 @@ def get_link_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg,
     # the observation output here is of the form
     # links stacked together, [batch_size, n_links, n_features]
     # the n_features are [link_vec, ee_flag, joint_vec, joint_val_encodeed]
-    
+        
     # get the joint values
     jvals_encoded = encoded_joint_pos_batched(env, asset_cfg, frequencies=joint_encoder_freqs, jval_lb=jval_lb, jval_ub=jval_ub)
     # jvals have shape (batch_size, n_joints, n_features)
@@ -830,12 +831,12 @@ def get_link_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg,
     jvals = torch.zeros(env.num_envs, lvecs.shape[1], jvals_encoded.shape[2]).to(env.scene.device)
     jvals[:, movable_joints, :] = jvals_encoded
     
+
     if global_cfg.OBSERVATION.MASK_ROBO_MORPH:
         lvecs = torch.zeros_like(lvecs)
         jvecs = torch.zeros_like(jvecs)
         ee_flag = torch.zeros_like(ee_flag)
-        
-        return torch.cat([lvecs, ee_flag, jvecs, jvals], dim=2)
+        link_obs = torch.cat([lvecs, ee_flag, jvecs, jvals], dim=2)
 
     elif global_cfg.OBSERVATION.LINK_POSE:
         link_poses = get_link_pose_batched(env, asset_cfg)
@@ -843,7 +844,7 @@ def get_link_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg,
         n_envs, n_links, _ = link_poses.shape
         n_rem_links = lvecs.shape[1] - n_links
         link_poses = torch.cat([link_poses, torch.zeros(n_envs, n_rem_links, 7).to(env.scene.device)], dim=1)
-        return torch.cat([lvecs, ee_flag, jvecs, jvals, link_poses], dim=2)
+        link_obs = torch.cat([lvecs, ee_flag, jvecs, jvals, link_poses], dim=2)
     elif global_cfg.OBSERVATION.PREV_ACTION:
         prev_action = env.action_manager.action
         _actions = process_actions(prev_action, action_bins).unsqueeze(-1)
@@ -852,9 +853,13 @@ def get_link_obs(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg,
         # dones: (batch_size,)
         dones = dones.unsqueeze(1).expand(-1, lvecs.shape[1]).unsqueeze(-1)
         action_dones = torch.cat([_actions, dones], dim=-1)
-        return torch.cat([lvecs, ee_flag, jvecs, jvals, action_dones], dim=2)
+        link_obs = torch.cat([lvecs, ee_flag, jvecs, jvals, action_dones], dim=2)
     else:
-        return torch.cat([lvecs, ee_flag, jvecs, jvals], dim=2)
+        link_obs = torch.cat([lvecs, ee_flag, jvecs, jvals], dim=2)
+        
+    if torch.isnan(link_obs).any():
+        import pdb; pdb.set_trace()
+    return link_obs
 
 
 def robo_goal_vec(env: ManagerBasedRLEnv, asset_name: SceneEntityCfg):    
