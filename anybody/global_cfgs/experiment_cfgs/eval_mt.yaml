@@ -1,6 +1,12 @@
 EVAL: true
+EVAL_ON_TEST: false
+IS_FINETUNING: false
 
-EVAL_CHECKPOINT: LOGS_PATH/path/to/checkpoints/agent.pt
+# must be provided through command line argument
+# EVAL_CHECKPOINT: LOGS_PATH/path/to/checkpoints/agent.pt
+
+FORCE_PROBLEM_SPEC_GEN: false
+SEARCH_CHECKPOINT: false
 
 TRAINER:
   TIMESTEPS: 10000
@@ -8,17 +14,14 @@ TRAINER:
   EVAL_TIMESTEPS: 500
   VIDEO_RENDER: true          # if running headless, need `--enable_cameras` flag.
 
-EXPERIMENT:
-  CHECKPOINT_INTERVAL: 12000  # Skip checkpointing during evaluation
-
 AGENT:
   EXPERIMENT:
+    CHECKPOINT_INTERVAL: 12000  # Skip checkpointing during evaluation
     WRITE_INTERVAL: 500
-
+    
 CURRICULUM:
   ACTIVE: false
 
-FORCE_PROBLEM_SPEC_GEN: false
-SEARCH_CHECKPOINT: false
-IS_FINETUNING: false
-EVAL_ON_TEST: false
+
+
+# common eval settings are performed directly in scripts/run.py

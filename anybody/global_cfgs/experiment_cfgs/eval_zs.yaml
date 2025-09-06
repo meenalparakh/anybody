@@ -1,7 +1,12 @@
 EVAL: true
 EVAL_ON_TEST: true
+IS_FINETUNING: false
 
-EVAL_CHECKPOINT: LOGS_PATH/path/to/checkpoints/agent.pt
+# must be provided through command line argument
+# EVAL_CHECKPOINT: LOGS_PATH/path/to/checkpoints/agent.pt
+
+FORCE_PROBLEM_SPEC_GEN: false
+SEARCH_CHECKPOINT: false
 
 TRAINER:
   TIMESTEPS: 10000
@@ -14,9 +19,6 @@ AGENT:
     CHECKPOINT_INTERVAL: 12000
     WRITE_INTERVAL: 500
 
-FORCE_PROBLEM_SPEC_GEN: false
-SEARCH_CHECKPOINT: false
-IS_FINETUNING: false
 
 CURRICULUM:
   ACTIVE: false

@@ -247,10 +247,9 @@ class MySequentialLogTrainer(Trainer):
 
                 # log environment info
                 # log custom environment data            
-                for info in infos:
-                    env_name = info.get('env_name', 'env')
-                    if "log" in info:
-                        for k, v in info["log"].items():
+                for env_name, env_info in infos.items():
+                    if "log" in env_info:
+                        for k, v in env_info["log"].items():
                             if isinstance(v, torch.Tensor) and v.numel() == 1:
                                 data_key = f"{env_name} / EpisodeInfo / {k}"
                                 self.agents.track_data(data_key, v.item())

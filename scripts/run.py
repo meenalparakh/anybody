@@ -139,12 +139,17 @@ def set_logger_options():
 
         if not cfg.IS_FINETUNING:
             if cfg.EVAL_ON_TEST:
-                experiment_name = ckpt_exp_name + "_eval" + suffix
+                experiment_name = ckpt_exp_name + "_zs_eval" + suffix
+                group_name = cfg.GROUP_RUN_NAME + "_zs_eval"
             else:
                 experiment_name = ckpt_exp_name + "_mt-eval" + suffix  # multi-task eval
+                group_name = cfg.GROUP_RUN_NAME + "_mt-eval"
 
-        elif cfg.IS_FINETUNING:
+        else:  # cfg.IS_FINETUNING:
             experiment_name = ckpt_exp_name + "_ft" + suffix  # finetuning log dir
+            group_name = cfg.GROUP_RUN_NAME + "_ft"
+            
+        cfg.GROUP_RUN_NAME = group_name
 
     if cfg.LOGGER == "wandb_offline":
         os.environ["WANDB_MODE"] = "offline"
@@ -342,6 +347,8 @@ def run():
 
 
 def load_cfg():
+    # the order of loading config settings is very important.
+    
     # loads default arguments
     base_cfgname = "base.yaml"
     cfg.merge_from_file(get_global_cfgs_dir() / base_cfgname)
@@ -349,6 +356,18 @@ def load_cfg():
     # load command line arguments
     cfg.merge_from_list(args_cli.opts)
 
+    if not is_none(cfg.EVAL_CHECKPOINT):
+        # the corresponding config.yaml
+        # assert cfg.EVAL, (
+        #     "cfg.EVAL is True must be true. (just a sanity check)"
+        # )
+        cfg.EVAL = True
+
+        cfg.EVAL_CHECKPOINT = format_ckpt_path(cfg.EVAL_CHECKPOINT)
+        config_path = Path(cfg.EVAL_CHECKPOINT).parents[1] / "config.yaml"
+        cfg.merge_from_file(config_path)
+        
+        
     # load override configs (useful for running experiments with different configurations)
     if not is_none(cfg.OVERRIDE_CFGNAME):
         # if override_cfgname path is absolute, then use it as is
@@ -358,16 +377,7 @@ def load_cfg():
             cfg.merge_from_file(cfg.OVERRIDE_CFGNAME)
         else:
             cfg.merge_from_file(get_global_cfgs_dir() / cfg.OVERRIDE_CFGNAME)
-
-    if cfg.EVAL:
-        # the corresponding config.yaml
-        assert not is_none(cfg.EVAL_CHECKPOINT), (
-            "EVAL_CHECKPOINT must be provided if cfg.EVAL is True."
-        )
-
-        cfg.EVAL_CHECKPOINT = format_ckpt_path(cfg.EVAL_CHECKPOINT)
-        config_path = Path(cfg.EVAL_CHECKPOINT).parents[1] / "config.yaml"
-        cfg.merge_from_file(config_path)
+        
 
     # override the config with the command line arguments if specified
     # this will give preference to the command line arguments
