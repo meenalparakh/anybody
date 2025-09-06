@@ -61,7 +61,6 @@ if __name__ == "__main__":
     project_dir = args.project_dir
     job_name = args.job_name
 
-
     # seeds = [23, 34, 42]
     seeds = [42]
     
@@ -93,9 +92,10 @@ if __name__ == "__main__":
     # SE run
     # example command: python scripts/run.py --headless OVERRIDE_CFGNAME experiment_cfgs/se.yaml SE_TASK simple_bot/r40_v1/reach RUN_SEED 42 PROJECT_NAME isbrv EXPERIMENT_NAME simple_bot-r40_v1-reach-42 
     task_info = get_task_info(args.benchmark)    
+    total_num_envs = task_info['n_train_subtasks'] * 128            # MT runs have 128 envs per task
     for seed in seeds:
         for robot, var, task in zip(task_info['robots'], task_info['variations'], task_info['tasks']):
-            base_cmd = f"scripts/run.py --headless SE_TASK {robot}/{var}/{task} RUN_SEED {seed} PROJECT_NAME {task_info['project_name']}"
+            base_cmd = f"scripts/run.py --headless SE_TASK {robot}/{var}/{task} RUN_SEED {seed} PROJECT_NAME {task_info['project_name']} TRAIN.NUM_ENVS_PER_TASK {total_num_envs}"
             # EXPERIMENT_NAME {robot}-{var}-{task}-{seed} OVERRIDE_CFGNAME experiment_cfgs/se.yaml
             
             # se mlp run

@@ -24,7 +24,6 @@ TRAINER:
   TIMESTEPS: 1_000_000
 
 TRAIN:
-  EPISODE_LENGTH_S: 6.0
   NUM_ENVS_PER_TASK: 128
 
 SEARCH_CHECKPOINT: false
@@ -43,7 +42,7 @@ AGENT:
   PPO:
     MINI_BATCHES: 16
   TASK_REWEIGHTING: true
-  
+
 # ===========================
 # Model Architecture
 # ===========================

@@ -211,3 +211,6 @@ slurm
 sync.sh
 docker/cluster/submit_job_ionic.sh
 docker/cluster/submit_job_neuronic.sh
+sync_exp.sh
+sync_pro.sh
+run_experiments/

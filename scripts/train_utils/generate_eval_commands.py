@@ -8,7 +8,7 @@ def get_agent_name(task, backbone):
     if (task, backbone) == ("reach", "Tf"):
         return "Tr1-c1-s1-t-nt-h0"
     elif (task, backbone) == ("reach", "Mlp"):
-        pass
+        return "Tr0-c0-s0-nm-h0"
     raise NotImplementedError(f"Agent name for task {task} and backbone {backbone} not implemented")
         
 
@@ -49,12 +49,15 @@ if __name__ == "__main__":
     RUN_TEMPLATE = f"{slurm_script} test4 {project_dir} COMMAND"    
 
     timestep = 100000
+
+
     
-    
-    agent_name = "Tr1-c1-s1-t-nt-h0"
     for seed in seeds:
-        cmd = f"scripts/run.py --headless --enable_cameras OVERRIDE_CFGNAME experiment_cfgs/eval_mt.yaml EVAL_CHECKPOINT LOGS_PATH/{args.benchmark}/{agent_name}_{seed}/checkpoints/agent_{timestep}.pt"
-        commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
+        for backbone in ['Tf', 'Mlp']:
+            agent_name = get_agent_name("reach", backbone)
+            cmd = f"scripts/run.py --headless --enable_cameras OVERRIDE_CFGNAME experiment_cfgs/eval_mt.yaml EVAL_CHECKPOINT LOGS_PATH/{args.benchmark}/{agent_name}_{seed}/checkpoints/agent_{timestep}.pt"
+            commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
+
 
     with open(output_path, 'w') as f:
         f.write("#!/bin/bash\n\n")

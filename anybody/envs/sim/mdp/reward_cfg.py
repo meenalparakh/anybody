@@ -119,7 +119,14 @@ class PushRewardCfg:
                     "asset_cfg": SceneEntityCfg(f"robot_{robo_id}"),
                 }
             )
-
+            
+        self.robo_0_acc = RewTerm(
+            func=mdp.joint_acc_l2,
+            weight=-cfg.REWARD.JOINT_ACC_WEIGHT,
+            params={
+                "asset_cfg": SceneEntityCfg(f"robot_{robo_id}"),
+            }
+        )
 
 @configclass
 class TerminationsCfg:

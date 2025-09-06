@@ -324,9 +324,6 @@ def run():
     # load the agent
     agent = load_agent(env)
 
-    # load the checkpoint if specified
-    load_checkpoint(agent)
-
     # initialize the trainer
     trainer_cfg = get_lower_case_cfg(cfg.TRAINER)
     trainer = MySequentialLogTrainer(cfg=trainer_cfg, env=env, agents=agent)
