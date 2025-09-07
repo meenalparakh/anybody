@@ -95,7 +95,7 @@ if __name__ == "__main__":
         slurm_script = "./docker/cluster/submit_job_ionic.sh"
     project_dir = args.project_dir
 
-    seeds = [23, 34, 42]
+    seeds = [42, 23, 34]
     
     args = parser.parse_args()
     
@@ -142,20 +142,25 @@ if __name__ == "__main__":
         task_info = get_task_info(args.benchmark)    
         total_num_envs = task_info['n_train_subtasks'] * 128            # MT runs have 128 envs per task
         
-        if 'reach' not in args.benchmark:
-            # for reach, we use diff-ik baselines.
-            for seed in seeds[:1]:
-                for robot, var, task in zip(task_info['robots'], task_info['variations'], task_info['tasks']):
-                    base_cmd = f"scripts/run.py --headless SE_TASK {robot}/{var}/{task} RUN_SEED {seed} PROJECT_NAME {task_info['project_name']} TRAIN.NUM_ENVS_PER_TASK {total_num_envs}"
-                    # EXPERIMENT_NAME {robot}-{var}-{task}-{seed} OVERRIDE_CFGNAME experiment_cfgs/se.yaml
-                    
+        # for reach, we use diff-ik baselines.
+        for seed in seeds[:1]:
+            for robot, var, task in zip(task_info['robots'], task_info['variations'], task_info['tasks']):
+                
+                ts = 200000 if "reach" in args.benchmark else 1000000
+
+                base_cmd = f"scripts/run.py --headless SE_TASK {robot}/{var}/{task} RUN_SEED {seed} PROJECT_NAME {task_info['project_name']} TRAIN.NUM_ENVS_PER_TASK {total_num_envs} TRAINER.TIMESTEPS {ts}"
+                # EXPERIMENT_NAME {robot}-{var}-{task}-{seed} OVERRIDE_CFGNAME experiment_cfgs/se.yaml
+                
+                if ("reach" not in args.benchmark) or (args.benchmark in ['intra_simple_bot_reach', 'intra_panda_reach']):
                     # se mlp run
+                    
                     RUN_TEMPLATE = f"{slurm_script} {short_name}_3 {project_dir} COMMAND"
-                    cfg_name = get_cfg_name(args.benchmark, "mlp", se=True)                    
+                    cfg_name = get_cfg_name(args.benchmark, "mlp", se=True)
                     cmd = f"{base_cmd} EXPERIMENT_NAME {robot}-{var}-{task}-{seed}-mlp OVERRIDE_CFGNAME {cfg_name}"
                     commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
-                    
-                    # se tf run
+
+                if (args.benchmark in ['intra_simple_bot_reach', 'intra_panda_reach']):
+                    # se tf run       (only for reach task)
                     RUN_TEMPLATE = f"{slurm_script} {short_name}_4 {project_dir} COMMAND"
                     cfg_name = get_cfg_name(args.benchmark, "tf", se=True)
                     cmd = f"{base_cmd} EXPERIMENT_NAME {robot}-{var}-{task}-{seed}-tf OVERRIDE_CFGNAME {cfg_name}"

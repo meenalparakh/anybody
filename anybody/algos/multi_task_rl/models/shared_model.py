@@ -29,7 +29,7 @@ def get_policy_network(net_out_dim=1):
     output_tanh = cfg.ACTION.ABSOLUTE
     
     if cfg.MODEL.TYPE in ["transformer", "mixed"]:
-        if cfg.MODEL.OUTPUT_STD:
+        if cfg.MODEL.OUTPUT_STD and (not cfg.ACTION.DISCRETE):
             net_out_dim *= 2
         mu_net = TransformerModel(
             net_out_dim, only_limbs=True, n_robots=n_robots, output_tanh=output_tanh
@@ -185,7 +185,6 @@ class StochasticPolicy_DiscreteAction(Model):
 
         logits, mu_attention_maps = self.logits_net(processed_obs)
         bs = logits.shape[0]
-        
         logits = logits.view(bs, self.n_limbs, cfg.ACTION.NUM_BINS)
         
         assert logits.shape == (bs, self.n_limbs, cfg.ACTION.NUM_BINS), f"Logits shape: {logits.shape}"

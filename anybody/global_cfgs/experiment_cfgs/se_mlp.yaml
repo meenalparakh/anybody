@@ -27,7 +27,7 @@ ACTION:
 # ===========================
 
 TRAINER:
-  TIMESTEPS: 200_000
+  TIMESTEPS: 1_000_000
 
 TRAIN:
   NUM_ENVS_PER_TASK: 1280

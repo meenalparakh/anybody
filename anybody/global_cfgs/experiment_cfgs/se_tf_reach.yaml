@@ -20,7 +20,7 @@ OBSERVATION:
   HIGH_DIM: false            # Set to true for high-dimensional point cloud observations
 
 ACTION:
-  DISCRETE: false
+  DISCRETE: true
 
 # ===========================
 # Training Parameters
