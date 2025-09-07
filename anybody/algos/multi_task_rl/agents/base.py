@@ -261,12 +261,12 @@ def _my_record_transition(
             # get env name to append to the right environment data
 
             # record data
-            self.tracking_data[
-                f"Additional Info / {task_name} / Inst. reward (max)"
-            ].append(torch.max(rewards[task_idx * n_envs : (task_idx + 1) * n_envs]).item())
-            self.tracking_data[
-                f"Additional Info / {task_name} / Inst. reward (min)"
-            ].append(torch.min(rewards[task_idx * n_envs : (task_idx + 1) * n_envs]).item())
+            # self.tracking_data[
+            #     f"Additional Info / {task_name} / Inst. reward (max)"
+            # ].append(torch.max(rewards[task_idx * n_envs : (task_idx + 1) * n_envs]).item())
+            # self.tracking_data[
+            #     f"Additional Info / {task_name} / Inst. reward (min)"
+            # ].append(torch.min(rewards[task_idx * n_envs : (task_idx + 1) * n_envs]).item())
             self.tracking_data[
                 f"Additional Info / {task_name} / Reward / Inst. reward (mean)"
             ].append(torch.mean(rewards[task_idx * n_envs : (task_idx + 1) * n_envs]).item())
@@ -275,12 +275,12 @@ def _my_record_transition(
                 track_rewards = np.array(self._track_rewards[task_name])
                 track_timesteps = np.array(self._track_timesteps[task_name])
 
-                self.tracking_data[
-                    f"Additional Info / {task_name} / Total reward (max)"
-                ].append(np.max(track_rewards))
-                self.tracking_data[
-                    f"Additional Info / {task_name} / Total reward (min)"
-                ].append(np.min(track_rewards))
+                # self.tracking_data[
+                #     f"Additional Info / {task_name} / Total reward (max)"
+                # ].append(np.max(track_rewards))
+                # self.tracking_data[
+                #     f"Additional Info / {task_name} / Total reward (min)"
+                # ].append(np.min(track_rewards))
                 self.tracking_data[f"{task_name} / Total reward (mean)"].append(
                     np.mean(track_rewards)
                 )

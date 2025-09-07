@@ -29,7 +29,16 @@ torch.autograd.set_detect_anomaly(True)
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
+def override_model_cfg():        
+    cfg.MODEL.MLP.EMBED_DIM = 72
+    cfg.MODEL.MLP.N_LAYERS = 3
+    cfg.MODEL.LIMB_EMBED_SIZE = 16
 
+    cfg.MODEL.TRANSFORMER.DIM_FEEDFORWARD = 256
+    cfg.MODEL.TRANSFORMER.NLAYERS = 3
+    cfg.MODEL.LIMB_EMBED_SIZE = 16
+    
+    
 def format_ckpt_path(checkpoint_path):
     if not is_none(checkpoint_path):
         if "LOGS_PATH" in checkpoint_path:
@@ -312,6 +321,10 @@ def load_agent(env):
         device=device,
     )
 
+    print(f"[Info] POLICY Model info: {cfg.MODEL.TYPE}")
+    num_params = sum(p.numel() for p in agent.policy.parameters())
+    print(f"[Info] Num parameters: {num_params}")
+
     return agent
 
 
@@ -391,6 +404,7 @@ if __name__ == "__main__":
     load_cfg()
     set_env_options()
     set_cfg_options()
+    override_model_cfg()
     set_logger_options()
     set_ckpts()
     set_seed(cfg.RUN_SEED)

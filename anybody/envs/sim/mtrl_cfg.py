@@ -50,7 +50,9 @@ class BenchmarkRLCfg(ManagerBasedMTRLEnvCfg):
             seed = cfg.MULTIENV.SEEDS[i]
             robot_env_variation = cfg.MULTIENV.VARIATIONS[i]
 
-            task_name = f"Task_{i}"
+            # task_name = f"Task_{i}"
+            # for logging, need unique task names for each task
+            task_name = f"{robo_type}_{robot_env_variation}_{robo_task}"
 
             prob = generate_problem_spec(
                 benchmark_task=cfg.BENCHMARK_TASK,

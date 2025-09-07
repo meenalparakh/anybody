@@ -139,6 +139,7 @@ def run():
     # env = ManagerBasedMTRLEnv(cfg=env_cfg, render_mode="rgb_array" if cfg.TRAINER.VIDEO_RENDER else None)
     env = ManagerBasedMTRLEnv(cfg=env_cfg, render_mode="rgb_array")
     env.reset()
+    
     # training seed, independent of the environment seed
     set_seed(cfg.RUN_SEED)
 

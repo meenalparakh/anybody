@@ -24,7 +24,10 @@ from anybody.utils.path_utils import (
     get_benchmark_cfgs_dir,
     get_global_cfgs_dir,
 )
-
+from isaaclab.controllers import (
+    DifferentialIKController,
+    DifferentialIKControllerCfg,
+)
 torch.autograd.set_detect_anomaly(True)
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
@@ -122,34 +125,12 @@ def set_logger_options():
             key = f.read().strip()
         wandb.login(key=key)
 
-    experiment_name = cfg.EXPERIMENT_NAME
-    if is_none(experiment_name):
-        experiment_name = cfg.GROUP_RUN_NAME + f"_{cfg.RUN_SEED}"
-
-    if cfg.EVAL:
-        ckpt_exp_name = Path(cfg.EVAL_CHECKPOINT).parents[1].name
-        # get agent time step from the checkpoint name: agent_{t}.pt
-        try:
-            agent_time_step = int(
-                Path(cfg.EVAL_CHECKPOINT).name.split("_")[-1].split(".")[0]
-            )
-            suffix = "_" + str(agent_time_step)
-        except ValueError:
-            suffix = ""
-
-        if not cfg.IS_FINETUNING:
-            if cfg.EVAL_ON_TEST:
-                experiment_name = ckpt_exp_name + "_zs_eval" + suffix
-                group_name = cfg.GROUP_RUN_NAME + "_zs_eval"
-            else:
-                experiment_name = ckpt_exp_name + "_mt-eval" + suffix  # multi-task eval
-                group_name = cfg.GROUP_RUN_NAME + "_mt-eval"
-
-        else:  # cfg.IS_FINETUNING:
-            experiment_name = ckpt_exp_name + "_ft" + suffix  # finetuning log dir
-            group_name = cfg.GROUP_RUN_NAME + "_ft"
-            
-        cfg.GROUP_RUN_NAME = group_name
+    # if cfg.EVAL: defaulting to eval mode
+    
+    ckpt_exp_name = "diff-ik"
+    # get agent time step from the checkpoint name: agent_{t}.pt
+    group_name = "diff-ik"
+    cfg.GROUP_RUN_NAME = group_name
 
     if cfg.LOGGER == "wandb_offline":
         os.environ["WANDB_MODE"] = "offline"
@@ -172,32 +153,6 @@ def set_logger_options():
         wandb.tensorboard.patch(
             root_logdir=os.path.join(cfg.AGENT.EXPERIMENT.DIRECTORY, experiment_name)
         )
-
-
-def set_ckpts():
-    if cfg.SEARCH_CHECKPOINT:
-        possible_dir = os.path.join(
-            cfg.AGENT.EXPERIMENT.DIRECTORY,
-            cfg.AGENT.EXPERIMENT.EXPERIMENT_NAME,
-            "checkpoints",
-        )
-
-        print(f"Searching for checkpoint in: {possible_dir}")
-        if os.path.exists(possible_dir):
-            all_agents = os.listdir(possible_dir)
-            ts = [int(x[:-3].split("_")[-1]) for x in all_agents]
-            if len(ts) == 0:
-                print("No checkpoints found in the directory.")
-                return
-            ts.sort()
-            agent = f"agent_{ts[-1]}.pt"
-            cfg.TRAIN_CHECKPOINT = os.path.join(possible_dir, agent)
-
-            print("*" * 60)
-            print("*" * 60)
-            print("Checkpoint found: ", cfg.TRAIN_CHECKPOINT)
-            print("*" * 60)
-            print("*" * 60)
 
 
 def set_cfg_options():
@@ -262,30 +217,32 @@ def load_env():
     return env
 
 
-def load_checkpoint(agent):
-    if not cfg.EVAL:
-        # In training mode
-        if not is_none(cfg.TRAIN_CHECKPOINT):
-            print("Loading checkpoint:", cfg.TRAIN_CHECKPOINT)
-            # finetuning models further on train env
-            # Choose whether to skip loading the optimizer state
-            skip_optimizer = cfg.IS_FINETUNING
-            agent.resume_from_checkpoint(
-                cfg.TRAIN_CHECKPOINT, skip_optimizer=skip_optimizer
-            )
 
-    else:
-        # In evaluation mode
-        print("Loading checkpoint:", cfg.EVAL_CHECKPOINT)
 
-        if cfg.IS_FINETUNING:  # finetuning on test env
-            # Load only model weights (not optimizer)
-            agent.resume_from_checkpoint(cfg.EVAL_CHECKPOINT, skip_optimizer=True)
-        else:
-            # Load entire model for evaluation
-            print("Evaluating the model at location:", cfg.EVAL_CHECKPOINT)
-            agent.load(cfg.EVAL_CHECKPOINT)
+def diff_ik_step(states, env):
+    # first extract the goal (target position) from the states
+    # create 
 
+
+def load_diff_ik_module(env, agent):
+    # 1. initialize the diff-ik module in the agent.
+    #    assume there are multiple envs.
+    # 2. override the act method of the agent.
+
+    # it has the following description:        
+    # actions = self.agents.act(
+    #     states, timestep=timestep, timesteps=self.timesteps
+    # )[0]
+
+    diff_ik_cfg = DifferentialIKControllerCfg(
+        command_type='position', use_relative_mode=False, ik_method="dls", 
+        # ik_params={"lambda_val": 0.1}
+    )
+    
+    diff_iks = {}
+    
+    for env_name in 
+    
 
 def load_agent(env):
     device = "cuda"
@@ -323,6 +280,9 @@ def run():
 
     # load the agent
     agent = load_agent(env)
+
+    # load the checkpoint if specified
+    load_diff_ik_module(env, agent)
 
     # initialize the trainer
     trainer_cfg = get_lower_case_cfg(cfg.TRAINER)
