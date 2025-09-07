@@ -12,7 +12,7 @@ from anybody.algos.multi_task_rl.trainer import MySequentialLogTrainer
 from anybody.cfg import cfg, dump_cfg, update_values, get_lower_case_cfg
 
 from anybody.envs.sim.mtrl_cfg import BenchmarkRLCfg
-from isaaclab.envs import ManagerBasedMTRLEnv
+from isaaclab.envs import ManagerBasedMTRLEnv, ManagerBasedRLEnv
 from anybody.envs.sim.gym_wrapper import MT_SKRLWrapper, VideoWrapper
 
 from anybody.morphs.generate_morphs import create_real_robot_usd
@@ -221,8 +221,8 @@ def load_env():
 
 def diff_ik_step(states, env):
     # first extract the goal (target position) from the states
-    # create 
-
+    import pdb; pdb.set_trace()
+    
 
 def load_diff_ik_module(env, agent):
     # 1. initialize the diff-ik module in the agent.
@@ -240,9 +240,18 @@ def load_diff_ik_module(env, agent):
     )
     
     diff_iks = {}
-    
-    for env_name in 
-    
+    robots = {}
+    robo_cfgs = {}
+
+    for env_name, task_env in env.__getattr__("envs").items():
+        task_env: ManagerBasedRLEnv
+        diff_ik = DifferentialIKController(
+            cfg=diff_ik_cfg, num_envs=task_env.scene.num_envs, device=env.device
+        )
+        diff_iks[env_name] = diff_ik
+
+    return diff_iks
+
 
 def load_agent(env):
     device = "cuda"

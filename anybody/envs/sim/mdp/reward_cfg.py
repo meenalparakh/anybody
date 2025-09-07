@@ -16,6 +16,7 @@ import anybody.envs.sim.utils as iu
 import anybody.envs.sim.mdp.funcs as ifunc
 
 from anybody.cfg import cfg
+from .funcs import modify_reward_weight
 
 @configclass
 class ReachRewardCfg:
@@ -230,8 +231,13 @@ class ReachCurriculumCfg:
     def __init__(self, prob: eu.ProblemSpec):
         
         # no curriculum for reach task
-        pass
+        # increase the weight for the joint acceleration penalty over time
 
+        self.action_rate = CurrTerm(
+            func=modify_reward_weight, params={"term_name": "robo_0_acc", 
+                                            "final_weight": -cfg.REWARD.JOINT_ACC_WEIGHT, 
+                                            "num_steps": 50000}
+        )
         # if cfg.CURRICULUM.ACTIVE:
             
         #     self.reach_curriculum = CurrTerm(
@@ -265,3 +271,9 @@ class PushCurriculumCfg:
                         }
                     )                
                 )
+                
+        self.action_rate = CurrTerm(
+            func=modify_reward_weight, params={"term_name": "robo_0_acc", 
+                                            "final_weight": -cfg.REWARD.JOINT_ACC_WEIGHT, 
+                                            "num_steps": 50000}
+        )
