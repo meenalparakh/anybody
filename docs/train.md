@@ -104,6 +104,13 @@ python scripts/run.py --headless --enable_cameras OVERRIDE_CFGNAME experiment_cf
 
 The evaluation script loads the config associated with the trained model and runs the evaluation task. It supports both multi-task and zero-shot evaluation.
 
+### Diff-IK Evaluation 
+To evaluate a policy using the differentiable IK module for reach task, use the following command. (The override config file is used to make the config similar to learning agents, but most of it is irrelevant.)
+
+```bash
+python scripts/train_utils/eval_IK.py BENCHMARK_TASK intra_simple_bot_reach OVERRIDE_CFGNAME experiment_cfgs/mt_mlp_reach.yaml
+```
+
 ### Multi-Task Evaluation
 
 Evaluate a trained policy on the morphologies it was trained on (works for both single- and multi-embodiment):

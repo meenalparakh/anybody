@@ -375,12 +375,15 @@ def diff_ik_step(env, states, diff_ik_info):
         root_pose_w = robot.data.root_state_w[:, 0:7]
         joint_pos = robot.data.joint_pos[:, robot_scene_cfg.joint_ids]
 
-        ee_pos_b, ee_quat_b = subtract_frame_transforms(
-            root_pose_w[:, 0:3],
-            root_pose_w[:, 3:7],
-            ee_pose_w[:, 0:3],
-            ee_pose_w[:, 3:7],
-        )
+        # ee_pos_b, ee_quat_b = subtract_frame_transforms(
+        #     root_pose_w[:, 0:3],
+        #     root_pose_w[:, 3:7],
+        #     ee_pose_w[:, 0:3],
+        #     ee_pose_w[:, 3:7],
+        # )
+        ee_pos_b = ee_pose_w[:, :3] - task_env.scene.env_origins
+        ee_quat_b = ee_pose_w[:, 3:7]
+        
         # compute the joint commands
         jpos_des = diff_ik_module.compute(
             ee_pos_b, ee_quat_b, jacobian, joint_pos
