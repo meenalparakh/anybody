@@ -236,7 +236,8 @@ class ReachCurriculumCfg:
         self.action_rate = CurrTerm(
             func=modify_reward_weight, params={"term_name": "robo_0_acc", 
                                             "final_weight": -cfg.REWARD.JOINT_ACC_WEIGHT, 
-                                            "num_steps": 50000}
+                                            "num_steps": 50000,
+                                            "curriculum_active": cfg.CURRICULUM.ACTIVE}
         )
         # if cfg.CURRICULUM.ACTIVE:
             
@@ -275,5 +276,6 @@ class PushCurriculumCfg:
         self.action_rate = CurrTerm(
             func=modify_reward_weight, params={"term_name": "robo_0_acc", 
                                             "final_weight": -cfg.REWARD.JOINT_ACC_WEIGHT, 
-                                            "num_steps": 50000}
+                                            "num_steps": 50000,
+                                            "curriculum_active": cfg.CURRICULUM.ACTIVE}
         )

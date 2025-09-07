@@ -1042,7 +1042,9 @@ def process_actions(actions, action_bins) -> torch.Tensor:
         _actions = actions
     return _actions
 
-def modify_reward_weight(env: ManagerBasedRLEnv, env_ids: Sequence[int], term_name: str, final_weight: float, num_steps: int):
+def modify_reward_weight(env: ManagerBasedRLEnv, env_ids: Sequence[int], 
+                         term_name: str, final_weight: float, num_steps: int,
+                         curriculum_active: bool):
     """Curriculum that modifies a reward weight a given number of steps.
 
     Args:
@@ -1053,9 +1055,14 @@ def modify_reward_weight(env: ManagerBasedRLEnv, env_ids: Sequence[int], term_na
         num_steps: The number of steps after which the change should be applied.
     """
     
-    frac = env.common_step_counter / num_steps
-    frac = min(frac, 1.0)
     
+    if not curriculum_active:
+        frac = 1.0
+
+    else:
+        frac = env.common_step_counter / num_steps
+        frac = min(frac, 1.0)
+
     weight = frac * final_weight # + (1 - frac) * 0.0
     
     # if env.common_step_counter > num_steps:

@@ -625,7 +625,7 @@ def map_trajectory_to_actions(prob: eu.ProblemSpec, robo_info_dict, traj, step):
     return torch.cat([action_values.reshape(-1), obj_action_values])
 
 
-def map_trajectory_to_actions_batched(prob: eu.ProblemSpec, robo_info_dict, traj_batch, step, n_envs, obs=None):
+def map_trajectory_to_actions_batched_deprecated(prob: eu.ProblemSpec, robo_info_dict, traj_batch, step, n_envs, obs=None):
     robo_indices = list(prob.robot_dict.keys())
     robo_indices.sort()
 
@@ -659,6 +659,49 @@ def map_trajectory_to_actions_batched(prob: eu.ProblemSpec, robo_info_dict, traj
                 
                 action_values[:, il] = jval
                 action_mask[:, il] = 1
+
+    # if obs is provided, make sure the action mask matches
+    if obs is not None:
+        given_act_mask = obs['act_mask'].bool()
+        action_mask = action_mask.bool().to(given_act_mask.device)
+        assert given_act_mask[:, :, 0].shape == action_mask.shape, f"Action mask shape mismatch {given_act_mask[:, :, 0].shape} != {action_mask.shape}"
+        assert torch.all(given_act_mask[:, :, 0] == action_mask), f"Action mask mismatch {given_act_mask[:, :, 0]} != {action_mask}"
+
+    # the action values are absolute here. Need to make sure that the cfg has absolute actions set
+    # return torch.cat([action_values.reshape(n_envs, -1), obj_action_values], dim=1)
+    return action_values
+
+
+def map_trajectory_to_actions_batched(robot: eu.Robot, robo_info_dict, robo_action, step, n_envs, obs=None):
+    # action_values = torch.zeros(n_envs, global_cfg.BENCH.MAX_NUM_ROBOTS, global_cfg.BENCH.MAX_NUM_LINKS + 1)
+    # obj_action_values = torch.zeros(n_envs, global_cfg.BENCH.MAX_NUM_OBJECTS)
+
+    action_values = torch.zeros(n_envs, global_cfg.BENCH.MAX_NUM_LINKS)
+    action_mask = torch.zeros(n_envs, global_cfg.BENCH.MAX_NUM_LINKS)
+
+    info = robo_info_dict
+    link_indices = list(info.keys())
+    link_indices.sort()
+
+    robo_joint_names = robot.act_info["joint_names"]
+    robo_lb = robot.act_info["joint_lb"]
+    robo_ub = robot.act_info["joint_ub"]
+
+    for il, link_idx in enumerate(link_indices):
+        jname = info[link_idx][-1]
+        if jname in robo_joint_names:
+            lb = robo_lb[robo_joint_names.index(jname)]
+            ub = robo_ub[robo_joint_names.index(jname)]
+            # get the joint value from the trajectory
+            jval = robo_action[jname][:, step]
+            # jval has n_envs elements
+            # normalize the joint value to -1, 1
+            
+            if global_cfg.ACTION.ABSOLUTE:
+                jval = (jval - lb) / (ub - lb) * 2.0 - 1.0
+            
+            action_values[:, il] = jval
+            action_mask[:, il] = 1
 
     # if obs is provided, make sure the action mask matches
     if obs is not None:

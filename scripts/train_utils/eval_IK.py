@@ -1,21 +1,24 @@
 from anybody.utils.start_sim import args_cli, simulation_app
 import os
 from pathlib import Path
-
+import numpy as np
 import wandb
 import torch
 
 from anybody.algos.multi_task_rl.agents.base import get_agent_cfg_and_memory, get_models
 from anybody.algos.multi_task_rl.agents import agents
 from anybody.algos.multi_task_rl.trainer import MySequentialLogTrainer
+from isaaclab.managers import SceneEntityCfg
 
 from anybody.cfg import cfg, dump_cfg, update_values, get_lower_case_cfg
+from isaaclab.utils.math import quat_from_matrix, subtract_frame_transforms
 
 from anybody.envs.sim.mtrl_cfg import BenchmarkRLCfg
 from isaaclab.envs import ManagerBasedMTRLEnv, ManagerBasedRLEnv
 from anybody.envs.sim.gym_wrapper import MT_SKRLWrapper, VideoWrapper
-
+import anybody.envs.sim.utils as iu
 from anybody.morphs.generate_morphs import create_real_robot_usd
+from anybody.envs.tasks import generate_problem_spec
 
 from anybody.utils.utils import set_seed, is_none
 from anybody.utils.path_utils import (
@@ -137,7 +140,7 @@ def set_logger_options():
         cfg.LOGGER = "wandb"
 
     if cfg.LOGGER == "wandb":
-        cfg.AGENT.EXPERIMENT.EXPERIMENT_NAME = experiment_name
+        cfg.AGENT.EXPERIMENT.EXPERIMENT_NAME = ckpt_exp_name
         cfg.AGENT.EXPERIMENT.DIRECTORY = cfg.AGENT.EXPERIMENT.BASE_DIRECTORY = (
             os.path.join(get_logs_dir(), cfg.PROJECT_NAME)
         )
@@ -145,13 +148,13 @@ def set_logger_options():
         cfg.AGENT.EXPERIMENT.WANDB_KWARGS.PROJECT = cfg.PROJECT_NAME
         cfg.AGENT.EXPERIMENT.WANDB_KWARGS.GROUP = cfg.GROUP_RUN_NAME
         cfg.AGENT.EXPERIMENT.WANDB_KWARGS.DIR = os.path.join(
-            cfg.AGENT.EXPERIMENT.DIRECTORY, experiment_name
+            cfg.AGENT.EXPERIMENT.DIRECTORY, ckpt_exp_name
         )
         cfg.TRAINER.VIDEO_DIR = os.path.join(
-            cfg.AGENT.EXPERIMENT.DIRECTORY, experiment_name, "videos"
+            cfg.AGENT.EXPERIMENT.DIRECTORY, ckpt_exp_name, "videos"
         )
         wandb.tensorboard.patch(
-            root_logdir=os.path.join(cfg.AGENT.EXPERIMENT.DIRECTORY, experiment_name)
+            root_logdir=os.path.join(cfg.AGENT.EXPERIMENT.DIRECTORY, ckpt_exp_name)
         )
 
 
@@ -191,6 +194,24 @@ def set_cfg_options():
     update_values(cfg)
 
 
+def set_eval_cfg():
+    cfg.EVAL = True
+    cfg.EVAL_ON_TEST = False
+    cfg.IS_FINETUNING = False
+    
+    cfg.FORCE_PROBLEM_SPEC_GEN = False
+    cfg.SEARCH_CHECKPOINT = False
+    
+    cfg.TRAINER.TIMESTEPS = 10000
+    cfg.TRAINER.EVAL_TIMESTEPS_INTERVAL = 5000
+    cfg.TRAINER.EVAL_TIMESTEPS = 500
+    cfg.TRAINER.VIDEO_RENDER = True  # if running headless, need `
+    
+    cfg.AGENT.EXPERIMENT.CHECKPOINT_INTERVAL = 12000  # Skip checkpointing during evaluation
+    cfg.AGENT.EXPERIMENT.WRITE_INTERVAL = 500
+    cfg.CURRICULUM.ACTIVE = False
+    
+
 def load_env():
     env_cfg = BenchmarkRLCfg()
     env = ManagerBasedMTRLEnv(
@@ -217,12 +238,30 @@ def load_env():
     return env
 
 
+def get_problem_specs():
+    probs = {}
+    for i in range(len(cfg.MULTIENV.TASKS)):
+        robo_task = cfg.MULTIENV.TASKS[i]
+        robo_type = cfg.MULTIENV.ROBOTS[i]
+        seed = cfg.MULTIENV.SEEDS[i]
+        robot_env_variation = cfg.MULTIENV.VARIATIONS[i]
 
+        # task_name = f"Task_{i}"
+        # for logging, need unique task names for each task
+        task_name = f"{robo_type}_{robot_env_variation}_{robo_task}"
 
-def diff_ik_step(states, env):
-    # first extract the goal (target position) from the states
-    import pdb; pdb.set_trace()
-    
+        prob = generate_problem_spec(
+            benchmark_task=cfg.BENCHMARK_TASK,
+            robo_cat=robo_type,
+            robo_task=robo_task,
+            variation=robot_env_variation,
+            seed=seed,
+            save_if_not_exist=True,
+        )
+        probs[task_name] = prob
+
+    return probs
+
 
 def load_diff_ik_module(env, agent):
     # 1. initialize the diff-ik module in the agent.
@@ -233,6 +272,14 @@ def load_diff_ik_module(env, agent):
     # actions = self.agents.act(
     #     states, timestep=timestep, timesteps=self.timesteps
     # )[0]
+    
+
+    def X_to_pose(X: np.ndarray):
+        pos = torch.from_numpy(X[:3, 3])
+        mat = torch.from_numpy(X[:3, :3])
+        quat = quat_from_matrix(mat)
+        pose = torch.cat([pos, quat])
+        return pose
 
     diff_ik_cfg = DifferentialIKControllerCfg(
         command_type='position', use_relative_mode=False, ik_method="dls", 
@@ -242,6 +289,11 @@ def load_diff_ik_module(env, agent):
     diff_iks = {}
     robots = {}
     robo_cfgs = {}
+    probs = get_problem_specs()
+    ee_jacobi_indices = {}
+    robo_base_poses = {}
+    robo_info_dict = {}
+    prob_robots = {}
 
     for env_name, task_env in env.__getattr__("envs").items():
         task_env: ManagerBasedRLEnv
@@ -249,8 +301,119 @@ def load_diff_ik_module(env, agent):
             cfg=diff_ik_cfg, num_envs=task_env.scene.num_envs, device=env.device
         )
         diff_iks[env_name] = diff_ik
+        
+        
+        prob = probs[env_name]
+        robo_id = list(prob.robot_dict.keys())[0]
+        robo = prob.robot_dict[robo_id]
+        prob_robots[env_name] = robo
 
-    return diff_iks
+        entity_cfg = SceneEntityCfg(
+            f"robot_{robo_id}",
+            joint_names=prob.robot_dict[robo_id].act_info["joint_names"],
+            body_names=[robo.ee_link],
+            preserve_order=True,
+        )
+        robo_cfgs[env_name] = entity_cfg
+        entity_cfg.resolve(task_env.scene)
+        
+        robots[env_name] = task_env.scene[f"robot_{robo_id}"]
+
+        if robots[env_name].is_fixed_base:
+            ee_jacobi_idx = entity_cfg.body_ids[0] - 1
+        else:
+            ee_jacobi_idx = entity_cfg.body_ids[0]
+
+        ee_jacobi_indices[env_name] = ee_jacobi_idx
+        base_pose = prob.robot_dict[robo_id].pose
+        robo_base_poses[env_name] = X_to_pose(base_pose).to(env.device)
+        robo_info_dict[env_name] = iu.precompute_robo_info(prob)[robo_id]
+
+
+    return {
+        'diff_iks': diff_iks,
+        'robots': robots,
+        'prob_robots': prob_robots,
+        'robo_cfgs': robo_cfgs,
+        'ee_jacobi_indices': ee_jacobi_indices,
+        'robo_base_poses': robo_base_poses,
+        "robo_info_dicts": robo_info_dict
+    }
+
+
+def diff_ik_step(env, states, diff_ik_info):
+    # first extract the goal (target position) from the states    
+    
+    target_pose = states['robo_goal']  # (num_envs, 7) pos(3) + quat(4) relative to ee.
+    
+    # command type is position
+    ik_commands = target_pose[:, 0, :]
+    
+    actions = []
+
+    prev_env_idx = 0
+    for task_idx, (env_name, task_env) in enumerate(env.__getattr__("envs").items()):
+        ik_commands_env = ik_commands[prev_env_idx: prev_env_idx + task_env.num_envs]
+        prev_env_idx += task_env.num_envs
+        diff_ik_module = diff_ik_info['diff_iks'][env_name]
+        robot = diff_ik_info['robots'][env_name]
+        robot_scene_cfg = diff_ik_info['robo_cfgs'][env_name]
+        ee_jacobi_idx = diff_ik_info['ee_jacobi_indices'][env_name]
+        robo_info = diff_ik_info['robo_info_dicts'][env_name]
+        prob_robot = diff_ik_info['prob_robots'][env_name]
+        # robo_base_pose = diff_ik_info['robo_base_poses'][env_name]
+        
+        diff_ik_module.reset()
+        diff_ik_module.set_command(ik_commands_env[:, :3], ee_quat=ik_commands_env[:, 3:].clone())
+        
+        jacobian = robot.root_physx_view.get_jacobians()[
+            :, ee_jacobi_idx, :, robot_scene_cfg.joint_ids
+        ]
+        ee_pose_w = robot.data.body_state_w[
+            :, robot_scene_cfg.body_ids[0], 0:7
+        ]
+        root_pose_w = robot.data.root_state_w[:, 0:7]
+        joint_pos = robot.data.joint_pos[:, robot_scene_cfg.joint_ids]
+
+        ee_pos_b, ee_quat_b = subtract_frame_transforms(
+            root_pose_w[:, 0:3],
+            root_pose_w[:, 3:7],
+            ee_pose_w[:, 0:3],
+            ee_pose_w[:, 3:7],
+        )
+        # compute the joint commands
+        jpos_des = diff_ik_module.compute(
+            ee_pos_b, ee_quat_b, jacobian, joint_pos
+        )
+
+        # the rl env takes as actions, the delta joint positions
+        if cfg.ACTION.ABSOLUTE:
+            jpos_diff = jpos_des
+        else:               
+            jpos_diff = jpos_des - joint_pos
+        
+        jnames = robot_scene_cfg.joint_names
+        robot_actions = {
+            jname: jpos_diff[:, i].unsqueeze(-1) for i, jname in enumerate(jnames)
+        }
+
+        # actions are absolute action values (not deltas)
+        env_actions = iu.map_trajectory_to_actions_batched(
+            prob_robot, robo_info, robot_actions, 0, task_env.scene.num_envs
+        )
+        actions.append(env_actions)
+        
+    action = torch.cat(actions, dim=0)
+    
+    return action.to(env.device)
+
+# need to override the act method of the agent
+# it has the following description:
+# the last argument timesteps is not used in PPO
+# actions = self.agents.act(
+#     states, timestep=timestep, timesteps=self.timesteps
+# )[0]
+
 
 
 def load_agent(env):
@@ -291,7 +454,17 @@ def run():
     agent = load_agent(env)
 
     # load the checkpoint if specified
-    load_diff_ik_module(env, agent)
+    ik_info = load_diff_ik_module(env, agent)
+
+    def new_act(states, role='policy'):
+        # print("Using diff-ik based action")
+        action = diff_ik_step(env, states['states'], ik_info)
+        logprob = torch.zeros(action.shape[0], 1).to(action.device)
+        # print(f"Action: {action.shape}, Logprob: {logprob.shape}")
+        
+        return action, logprob, {}
+    
+    agent.policy.act = new_act
 
     # initialize the trainer
     trainer_cfg = get_lower_case_cfg(cfg.TRAINER)
@@ -355,10 +528,10 @@ def load_cfg():
 
 if __name__ == "__main__":
     load_cfg()
+    set_eval_cfg()
     set_env_options()
     set_cfg_options()
     set_logger_options()
-    set_ckpts()
     set_seed(cfg.RUN_SEED)
 
     cfg.freeze()
