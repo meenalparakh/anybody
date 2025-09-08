@@ -49,7 +49,7 @@ AGENT:
 MODEL:
   TYPE: mlp-res
   MLP:
-    EMBED_DIM: 192
+    EMBED_DIM: 72
     N_LAYERS: 3
   LIMB_EMBED_SIZE: 16
 

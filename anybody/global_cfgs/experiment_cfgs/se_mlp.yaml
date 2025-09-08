@@ -42,9 +42,9 @@ RUN_SEED: 42                 # Change to use a different RL seed
 AGENT_NAME: ppo
 
 AGENT:
-  EMA_CRITIC: true
+  EMA_CRITIC: false
   PCGRAD: false
-  SYMLOG_RETURNS: true
+  SYMLOG_RETURNS: false
   PPO:
     MINI_BATCHES: 8
 
@@ -55,6 +55,6 @@ AGENT:
 MODEL:
   TYPE: mlp-res
   MLP:
-    EMBED_DIM: 192
+    EMBED_DIM: 72
     N_LAYERS: 3
   LIMB_EMBED_SIZE: 16
