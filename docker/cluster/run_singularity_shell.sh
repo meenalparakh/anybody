@@ -120,19 +120,12 @@ singularity_cmd=(
     --env CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES 
     --env SLURM_JOB_ID=$SLURM_JOB_ID 
     --env SLURM_JOB_NODELIST=$SLURM_JOB_NODELIST 
-    --env CHECK_OVERHEAT_FOLDER="/workspace/check_overheat" 
     --env ISAACLAB_PATH=/workspace/anybody/isaaclab 
     --env PROJECT_PATH=/workspace/anybody 
     --env WANDB_API_KEY=$wandb_key
     --pwd /workspace/anybody
     --nv --containall 
 )
-
-# Conditionally bind CLUSTER_OVERHEAT_CHECK_DIR
-if [[ -n "$CLUSTER_OVERHEAT_CHECK_DIR" ]]; then
-    singularity_cmd+=(--bind ${CLUSTER_OVERHEAT_CHECK_DIR}:/workspace/check_overheat:rw)
-fi
-
 
 # Add the SIF file and the command to run
 singularity_cmd+=("$WORK_DIR/isaac-lab-anybody.sif")

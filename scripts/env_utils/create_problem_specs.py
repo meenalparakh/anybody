@@ -141,24 +141,26 @@ def generate_problem_specs_for_cfgs(cfg_name):
             seed=robo_count,
             save_if_not_exist=True
         )
-        get_links_info(prob)        
+        # get_links_info(prob)        
         robo_count += 1
     
     
     
 if __name__ == "__main__":
 
-    cfg.merge_from_list(args_cli.opts)
     cfg.ALLOW_PROBLEM_SPEC_GEN = True
     
     cfg.FORCE_RECOMPUTE_PROBLEM_SPEC = False
-    cfg.FORCE_ROBO_LINK_USD_CONVERSION = True
-    cfg.FORCE_RECOMPUTE_LINK_INFO = True
-
+    cfg.FORCE_ROBO_LINK_USD_CONVERSION = False
+    cfg.FORCE_RECOMPUTE_LINK_INFO = False
+    
     generate_cfgs = True
 
     if generate_cfgs:
         cfg.NUM_GOAL_RANDOMIZATIONS = 100
+
+    cfg.merge_from_list(args_cli.opts)
+
 
     benchmark_tasks = get_benchmark_cfgs_dir() / "all_tasks.json"
     
@@ -171,6 +173,11 @@ if __name__ == "__main__":
         cfg_names = [cfg.BENCHMARK_TASK]
                 
     for cfg_name in cfg_names:
+        if "inter_arms" in cfg_name:
+            continue
+        if cfg_name in ["inter_arms_reach", "inter_arms_push_simple"]:
+            # we are using v2 versions of these
+            continue
         print(f"Generating problem specs for {cfg_name} ############################")
         generate_problem_specs_for_cfgs(cfg_name)
  

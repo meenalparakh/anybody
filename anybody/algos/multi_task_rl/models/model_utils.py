@@ -89,6 +89,7 @@ class PointCloudEncoder(nn.Module):
         with torch.no_grad():    
             obstacle_pose = x[:, 0, :7]
             obstacle_shape = x[:, 0, 7 + 3:]   # the first 3 are the object type
+            
             pcd = generate_batched_cuboid_point_clouds(
                 obstacle_shape, obstacle_pose, matrix_from_quat,
                 num_points=cfg.OBSERVATION.PCD_POINTS, 

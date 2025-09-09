@@ -1,7 +1,8 @@
 # ===========================
 # Logging Configuration
 # ===========================
-GROUP_RUN_NAME: Tr1-c1-s1-t-nt-h0               # WandB group/run name
+# experiment name is "{group_run_name}_{seed}"
+GROUP_RUN_NAME: Tr0-c1-s1-t-nt-h0              # WandB group/run name
 
 # ===========================
 # Environment Settings
@@ -13,14 +14,14 @@ OBSERVATION:
   HIGH_DIM: false            # Set to true for high-dimensional point cloud observations
 
 ACTION:
-  DISCRETE: true
+  DISCRETE: false
 
 # ===========================
 # Training Parameters
 # ===========================
 
 TRAINER:
-  TIMESTEPS: 1_000_000
+  TIMESTEPS: 500_000
 
 TRAIN:
   NUM_ENVS_PER_TASK: 128
@@ -55,4 +56,3 @@ MODEL:
     NLAYERS: 3
     NHEAD: 4
   LIMB_EMBED_SIZE: 16
-  OUTPUT_STD: true         # std not used in discrete setting, but needed implementation-wise

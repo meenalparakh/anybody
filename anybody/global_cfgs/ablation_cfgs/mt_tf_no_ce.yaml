@@ -1,7 +1,8 @@
 # ===========================
 # Logging Configuration
 # ===========================
-GROUP_RUN_NAME: Tr1-c1-s1-t-nt-h0               # WandB group/run name
+# experiment name is "{group_run_name}_{seed}"
+GROUP_RUN_NAME: Tr1-c0-s1-t-nt-h0              # WandB group/run name
 
 # ===========================
 # Environment Settings
@@ -20,7 +21,7 @@ ACTION:
 # ===========================
 
 TRAINER:
-  TIMESTEPS: 1_000_000
+  TIMESTEPS: 500_000
 
 TRAIN:
   NUM_ENVS_PER_TASK: 128
@@ -35,7 +36,7 @@ RUN_SEED: 42                 # Change to use a different RL seed
 AGENT_NAME: ppo
 
 AGENT:
-  EMA_CRITIC: true
+  EMA_CRITIC: false
   PCGRAD: false
   SYMLOG_RETURNS: true
   PPO:

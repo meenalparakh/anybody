@@ -1,7 +1,7 @@
 # ===========================
 # Logging Configuration
 # ===========================
-GROUP_RUN_NAME: Tr1-c1-s1-t-nt-h0               # WandB group/run name
+GROUP_RUN_NAME: Tr0-c0-s0-t-nt-h0               # WandB group/run name
 
 # ===========================
 # Environment Settings
@@ -13,7 +13,7 @@ OBSERVATION:
   HIGH_DIM: false            # Set to true for high-dimensional point cloud observations
 
 ACTION:
-  DISCRETE: true
+  DISCRETE: false
 
 # ===========================
 # Training Parameters
@@ -35,12 +35,11 @@ RUN_SEED: 42                 # Change to use a different RL seed
 AGENT_NAME: ppo
 
 AGENT:
-  EMA_CRITIC: true
+  EMA_CRITIC: false
   PCGRAD: false
-  SYMLOG_RETURNS: true
+  SYMLOG_RETURNS: false
   PPO:
     MINI_BATCHES: 16
-  TASK_REWEIGHTING: true
 
 # ===========================
 # Model Architecture
@@ -55,4 +54,3 @@ MODEL:
     NLAYERS: 3
     NHEAD: 4
   LIMB_EMBED_SIZE: 16
-  OUTPUT_STD: true         # std not used in discrete setting, but needed implementation-wise

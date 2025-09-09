@@ -9,7 +9,7 @@ short_names = {
     "intra_simple_bot_push_simple": "2", 
     "intra_panda_reach": "3", 
     "intra_panda_push_simple": "4", 
-    "inter_arms_reach": "5", 
+    # "inter_arms_reach": "5", 
     "inter_arms_push_simple": "6", 
     "inter_ee_arm_reach": "7", 
     "inter_ee_arm_push_simple": "8", 
@@ -18,8 +18,10 @@ short_names = {
     "inter_task_ur5": "11", 
     "intra_simple_bot_reach_v2": "12", 
     "intra_simple_bot_push_simple_v2": "13", 
-    "inter_arms_reach_v2": "14", 
-    "inter_arms_push_simple_v2": "15"
+    "intra_simple_bot_reach_hd_v2": "14", 
+    "intra_simple_bot_push_simple_hd_v2": "15", 
+    "inter_arms_reach_v2": "16", 
+    "inter_arms_push_simple_v2": "17"
 }
 
 
@@ -86,6 +88,8 @@ if __name__ == "__main__":
     parser.add_argument("--output_file", type=str, default=None, help="Output file to write commands to")
     parser.add_argument("--neuronic", action='store_true', help="If set, use neuronic cluster script")
     parser.add_argument("--project_dir", type=str, default="/n/fs/pvl-procur/anybody", help="Project directory on the cluster")
+    parser.add_argument("--run_types", type=str, default="all", help="Type of runs to generate commands for. Options: all, mt-mlp, mt-tf, se-mlp, se-tf")
+    parser.add_argument("--high_dim", action='store_true', help="If set, use pcd inputs for the task.")
 
     args = parser.parse_args()
 
@@ -95,6 +99,12 @@ if __name__ == "__main__":
         slurm_script = "./docker/cluster/submit_job_ionic.sh"
     project_dir = args.project_dir
 
+    if args.run_types == 'all':
+        run_types = ['mt-mlp', 'mt-tf', 'se-mlp', 'se-tf']
+    else:
+        run_types = args.run_types.split('_')      # e.g. mt-mlp_se-tf_se-mlp
+
+    print(f"Generating commands for run types: {run_types}")
     seeds = [42, 23, 34]
     
     args = parser.parse_args()
@@ -108,8 +118,13 @@ if __name__ == "__main__":
     total_runs = 0
 
     for benchmark in benchmarks:
-        
         args.benchmark = benchmark
+
+        if args.benchmark not in short_names:
+            print(f"Benchmark {args.benchmark} not in short names, skipping...")
+            continue
+
+        short_name = short_names[args.benchmark]
 
         if (not args.output_file) or (len(benchmarks) > 1):
             args.output_file = "run_" + args.benchmark
@@ -121,21 +136,25 @@ if __name__ == "__main__":
         # MT runs
         # example_command: python scripts/run.py --headless BENCHMARK_TASK intra_simple_bot_reach OVERRIDE_CFGNAME experiment_cfgs/mt_mlp_reach.yaml
 
-        short_name = short_names[args.benchmark]
+        args.high_dim = "hd_v2" in args.benchmark
+        suffix = " OBSERVATION.HIGH_DIM True" if args.high_dim else ""
 
-        RUN_TEMPLATE = f"{slurm_script} {short_name}_1 {project_dir} COMMAND"
-        # mt tf run
-        for seed in seeds:
-            cfg_name = get_cfg_name(args.benchmark, "tf", se=False)
-            cmd = f"scripts/run.py --headless BENCHMARK_TASK {args.benchmark} OVERRIDE_CFGNAME {cfg_name} RUN_SEED {seed}"
-            commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
 
-        RUN_TEMPLATE = f"{slurm_script} {short_name}_2 {project_dir} COMMAND"        
-        # mt mlp run
-        for seed in seeds:
-            cfg_name = get_cfg_name(args.benchmark, "mlp", se=False)
-            cmd = f"scripts/run.py --headless BENCHMARK_TASK {args.benchmark} OVERRIDE_CFGNAME {cfg_name} RUN_SEED {seed}"
-            commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
+        if 'mt-tf' in run_types:
+            RUN_TEMPLATE = f"{slurm_script} {short_name}_1 {project_dir} COMMAND"
+            # mt tf run
+            for seed in seeds:
+                cfg_name = get_cfg_name(args.benchmark, "tf", se=False)
+                cmd = f"scripts/run.py --headless BENCHMARK_TASK {args.benchmark} OVERRIDE_CFGNAME {cfg_name} RUN_SEED {seed}" + suffix
+                commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
+
+        if 'mt-mlp' in run_types:
+            RUN_TEMPLATE = f"{slurm_script} {short_name}_2 {project_dir} COMMAND"        
+            # mt mlp run
+            for seed in seeds:
+                cfg_name = get_cfg_name(args.benchmark, "mlp", se=False)
+                cmd = f"scripts/run.py --headless BENCHMARK_TASK {args.benchmark} OVERRIDE_CFGNAME {cfg_name} RUN_SEED {seed}" + suffix
+                commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
 
         # SE run
         # example command: python scripts/run.py --headless OVERRIDE_CFGNAME experiment_cfgs/se.yaml SE_TASK simple_bot/r40_v1/reach RUN_SEED 42 PROJECT_NAME isbrv EXPERIMENT_NAME simple_bot-r40_v1-reach-42 
@@ -146,12 +165,13 @@ if __name__ == "__main__":
         for seed in seeds[:1]:
             for robot, var, task in zip(task_info['robots'], task_info['variations'], task_info['tasks']):
                 
-                ts = 200000 if "reach" in args.benchmark else 1000000
+                # ts = 200000 if "reach" in args.benchmark else 1000000
 
-                base_cmd = f"scripts/run.py --headless SE_TASK {robot}/{var}/{task} RUN_SEED {seed} PROJECT_NAME {task_info['project_name']} TRAIN.NUM_ENVS_PER_TASK {total_num_envs} TRAINER.TIMESTEPS {ts}"
+                base_cmd = f"scripts/run.py --headless SE_TASK {robot}/{var}/{task} RUN_SEED {seed} PROJECT_NAME {task_info['project_name']} TRAIN.NUM_ENVS_PER_TASK {total_num_envs}" + suffix
                 # EXPERIMENT_NAME {robot}-{var}-{task}-{seed} OVERRIDE_CFGNAME experiment_cfgs/se.yaml
                 
-                if ("reach" not in args.benchmark) or (args.benchmark in ['intra_simple_bot_reach', 'intra_panda_reach']):
+                # if ("reach" not in args.benchmark) or (args.benchmark in ['intra_simple_bot_reach', 'intra_panda_reach']):
+                if 'se-mlp' in run_types:
                     # se mlp run
                     
                     RUN_TEMPLATE = f"{slurm_script} {short_name}_3 {project_dir} COMMAND"
@@ -159,7 +179,8 @@ if __name__ == "__main__":
                     cmd = f"{base_cmd} EXPERIMENT_NAME {robot}-{var}-{task}-{seed}-mlp OVERRIDE_CFGNAME {cfg_name}"
                     commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
 
-                if (args.benchmark in ['intra_simple_bot_reach', 'intra_panda_reach']):
+                # if (args.benchmark in ['intra_simple_bot_reach', 'intra_panda_reach']):
+                if ('se-tf' in run_types) and ("reach" in args.benchmark) and (args.benchmark in ['intra_simple_bot_reach', 'intra_panda_reach']):
                     # se tf run       (only for reach task)
                     RUN_TEMPLATE = f"{slurm_script} {short_name}_4 {project_dir} COMMAND"
                     cfg_name = get_cfg_name(args.benchmark, "tf", se=True)
