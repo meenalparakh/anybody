@@ -21,7 +21,7 @@ fi
 # clean the working directory if it exists
 if [ -d "$WORK_DIR" ]; then
     echo "Deleting existing working directory: $WORK_DIR"
-    rm -rf "$WORK_DIR"
+    rm -rf "$WORK_DIR/*"
 fi
 
 mkdir -p "$WORK_DIR"
@@ -29,6 +29,7 @@ mkdir -p "$WORK_DIR"
 # caches cause issues with multiple jobs running at the same time
 # define cache dir uniquely if possible: base cache dir + job id
 CLUSTER_ISAAC_SIM_CACHE_DIR="${WORK_DIR}/docker-isaac-sim"
+
 
 setup_directories() {
     # Check and create directories

@@ -9,11 +9,6 @@ MULTIENV:
   - 0
   - 0
   - 0
-  TARGETS:
-  - joint
-  - joint
-  - joint
-  - pose
   TASKS:
   - push_simple
   - push_simple
@@ -29,8 +24,6 @@ TEST_ENVS:
   - real
   SEEDS:
   - 0
-  TARGETS:
-  - joint
   TASKS:
   - push_simple
   VARIATIONS:

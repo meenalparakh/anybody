@@ -87,24 +87,27 @@ class EventCfg:
     """Configuration for events."""
 
     def __init__(self, prob: eu.ProblemSpec):
-        
-        for robo_id, robo in prob.robot_dict.items():
-            self.__setattr__(
-                f"robot_{robo_id}_physics_material",
-                EventTerm(
-                    func=mdp.randomize_rigid_body_material,
-                    mode="startup",
-                    params={
-                        "asset_cfg": SceneEntityCfg(f"robot_{robo_id}",
-                                    body_names=[".*"]),
-                        "static_friction_range": (1.00, 1.5),
-                        "dynamic_friction_range": (0.8, 1.5),
-                        "restitution_range": (0.0, 0.0),
-                        "num_buckets": 16,
-                    },
-                )
-            )
+
+        if cfg.OBSERVATION.RANDOMIZE_ROBOT_MATERIAL:
             
+            for robo_id, robo in prob.robot_dict.items():
+                self.__setattr__(
+                    f"robot_{robo_id}_physics_material",
+                    EventTerm(
+                        func=mdp.randomize_rigid_body_material,
+                        mode="startup",
+                        params={
+                            "asset_cfg": SceneEntityCfg(f"robot_{robo_id}",
+                                        body_names=[".*"]),
+                            "static_friction_range": (1.00, 1.5),
+                            "dynamic_friction_range": (0.8, 1.5),
+                            "restitution_range": (0.0, 0.0),
+                            "num_buckets": 16,
+                        },
+                    )
+                )
+                    
+
             # also randomize the joint parameters
             # self.__setattr__(
             #     f"robot_{robo_id}_joint_parameters",

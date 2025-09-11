@@ -5,22 +5,7 @@ import yaml
 from pathlib import Path
 
 short_names = {
-    "intra_simple_bot_reach": "1", 
-    "intra_simple_bot_push_simple": "2", 
-    "intra_panda_reach": "3", 
-    "intra_panda_push_simple": "4", 
-    "inter_arms_reach": "5", 
-    "inter_arms_push_simple": "6", 
-    "inter_ee_arm_reach": "7", 
-    "inter_ee_arm_push_simple": "8", 
-    "inter_prims_reach": "9", 
-    "inter_prims_push_simple": "10", 
-    "inter_task_ur5": "11", 
-    "intra_simple_bot_reach_v2": "12", 
-    "intra_simple_bot_push_simple_v2": "13", 
-    "inter_arms_reach_v2": "14", 
-    "inter_arms_push_simple_v2": "15",
-    "ablation": "16"
+    "ablation": "18"
 }
 
 cfg_names = {
@@ -45,8 +30,10 @@ if __name__ == "__main__":
 
     is_neuronic = args.neuronic
     slurm_script = "./docker/cluster/submit_job_neuronic.sh"
+    run_dir = "neuronic"
     if not is_neuronic:
         slurm_script = "./docker/cluster/submit_job_ionic.sh"
+        run_dir = "ionic"
     project_dir = args.project_dir
 
     if args.run_types == 'all':
@@ -61,9 +48,10 @@ if __name__ == "__main__":
     total_runs = 0
 
     if (not args.output_file):
-        args.output_file = "run_ablation"
+        args.output_file = run_dir + "/ablation"
             
         output_path = get_experiment_scripts_dir() / (args.output_file + ".sh")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
             
         commands = []
         

@@ -5,23 +5,23 @@ import yaml
 from pathlib import Path
 
 short_names = {
-    "intra_simple_bot_reach": "1", 
-    "intra_simple_bot_push_simple": "2", 
-    "intra_panda_reach": "3", 
-    "intra_panda_push_simple": "4", 
+    "intra_simple_bot_reach": "1",        # done
+    "intra_simple_bot_push_simple": "2",          # done
+    "intra_panda_reach": "3",        # done
+    "intra_panda_push_simple": "4",      # revisit
     # "inter_arms_reach": "5", 
-    "inter_arms_push_simple": "6", 
-    "inter_ee_arm_reach": "7", 
-    "inter_ee_arm_push_simple": "8", 
-    "inter_prims_reach": "9", 
-    "inter_prims_push_simple": "10", 
-    "inter_task_ur5": "11", 
-    "intra_simple_bot_reach_v2": "12", 
-    "intra_simple_bot_push_simple_v2": "13", 
-    "intra_simple_bot_reach_hd_v2": "14", 
-    "intra_simple_bot_push_simple_hd_v2": "15", 
-    "inter_arms_reach_v2": "16", 
-    "inter_arms_push_simple_v2": "17"
+    # "inter_arms_push_simple": "6",
+    "inter_ee_arm_reach": "7",              # done      
+    "inter_ee_arm_push_simple": "8",        # queued
+    "inter_prims_reach": "9",              # done
+    "inter_prims_push_simple": "10",           # done
+    "inter_task_ur5": "11",                 # queued
+    "intra_simple_bot_reach_v2": "12",       # revisit 
+    "intra_simple_bot_push_simple_v2": "13",      # revisit
+    "intra_simple_bot_reach_hd_v2": "14",          # done
+    "intra_simple_bot_push_simple_hd_v2": "15",     # revisit
+    "inter_arms_reach_v2": "16",          # remaining
+    "inter_arms_push_simple_v2": "17"      # remaining
 }
 
 
@@ -95,8 +95,10 @@ if __name__ == "__main__":
 
     is_neuronic = args.neuronic
     slurm_script = "./docker/cluster/submit_job_neuronic.sh"
+    run_dir = "neuronic"
     if not is_neuronic:
         slurm_script = "./docker/cluster/submit_job_ionic.sh"
+        run_dir = "ionic"
     project_dir = args.project_dir
 
     if args.run_types == 'all':
@@ -127,9 +129,10 @@ if __name__ == "__main__":
         short_name = short_names[args.benchmark]
 
         if (not args.output_file) or (len(benchmarks) > 1):
-            args.output_file = "run_" + args.benchmark
+            args.output_file = f"{run_dir}/{args.benchmark}"
             
         output_path = get_experiment_scripts_dir() / (args.output_file + ".sh")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
             
         commands = []
         
@@ -137,7 +140,7 @@ if __name__ == "__main__":
         # example_command: python scripts/run.py --headless BENCHMARK_TASK intra_simple_bot_reach OVERRIDE_CFGNAME experiment_cfgs/mt_mlp_reach.yaml
 
         args.high_dim = "hd_v2" in args.benchmark
-        suffix = " OBSERVATION.HIGH_DIM True" if args.high_dim else ""
+        suffix = " OBSERVATION.HIGH_DIM True AGENT.PPO.MINI_BATCHES 16" if args.high_dim else ""
 
 
         if 'mt-tf' in run_types:

@@ -173,8 +173,8 @@ if __name__ == "__main__":
         cfg_names = [cfg.BENCHMARK_TASK]
                 
     for cfg_name in cfg_names:
-        if "inter_arms" in cfg_name:
-            continue
+        # if "inter_arms" in cfg_name:
+        #     continue
         if cfg_name in ["inter_arms_reach", "inter_arms_push_simple"]:
             # we are using v2 versions of these
             continue

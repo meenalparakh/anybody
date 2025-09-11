@@ -692,7 +692,6 @@ def modify_termination_thd(
             # update rew settings
             term_cfg.params['success_obj_pose_threshold'] = thd
         
-        import pdb; pdb.set_trace()
             
         env.reward_manager.set_term_cfg(rew_term_name, term_cfg)
         
