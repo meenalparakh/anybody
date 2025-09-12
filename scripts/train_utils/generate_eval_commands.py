@@ -23,6 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--neuronic", action='store_true', help="If set, use neuronic cluster script")
     parser.add_argument("--project_dir", type=str, default="/n/fs/pvl-exptrack/anybody", help="Project directory on the cluster")
     parser.add_argument("--job_name", type=str, default="test_run", help="Job name for the cluster job")
+    parser.add_argument("--cluster_local_eval", action='store_true', help="If set, evaluate cluster runs locally.")
 
     args = parser.parse_args()
 
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     for seed in seeds:
         for backbone in ['Tf', 'Mlp']:
             agent_name = get_agent_name("reach", backbone)
-            cmd = f"scripts/run.py --headless --enable_cameras OVERRIDE_CFGNAME experiment_cfgs/eval_mt.yaml EVAL_CHECKPOINT LOGS_PATH/{args.benchmark}/{agent_name}_{seed}/checkpoints/agent_{timestep}.pt"
+            cmd = f"scripts/run.py --headless --enable_cameras OVERRIDE_CFGNAME experiment_cfgs/eval_mt.yaml EVAL_CHECKPOINT LOGS_PATH/{args.benchmark}/{agent_name}_{seed}/checkpoints/agent_{timestep}.pt EVAL_CLUSTER_ON_LOCAL {args.cluster_local_eval}"
             commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
 
 

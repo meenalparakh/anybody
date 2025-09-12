@@ -23,6 +23,7 @@ from anybody.utils.path_utils import (
     get_logs_dir,
     get_benchmark_cfgs_dir,
     get_global_cfgs_dir,
+    get_synced_slurm_logs_dir
 )
 
 torch.autograd.set_detect_anomaly(True)
@@ -43,7 +44,13 @@ def format_ckpt_path(checkpoint_path):
     if not is_none(checkpoint_path):
         if "LOGS_PATH" in checkpoint_path:
             # replace logs_path with logs dir path
-            checkpoint_path = checkpoint_path.replace("LOGS_PATH", str(get_logs_dir()))
+            logs_path = str(get_logs_dir())
+            if (not logs_path.startswith("/workspace")) and cfg.EVAL_CLUSTER_ON_LOCAL:    
+                # we are evaluating a cluster run locally - need to use the synced logs dir
+                logs_path = str(get_synced_slurm_logs_dir())
+
+            checkpoint_path = checkpoint_path.replace("LOGS_PATH", logs_path)
+                
         return checkpoint_path
 
 
@@ -225,8 +232,13 @@ def set_cfg_options():
     if "push_simple" in cfg.MULTIENV.TASKS:
         # set the reward related configs appropriately
         cfg.REWARD.OBJ_SIMPLE_REWARD = True
+        cfg.REWARD.JOINT_ACC_WEIGHT = 0.0             # for push task, we don't need to enforce smoothness.
         cfg.TRAIN.EPISODE_LENGTH_S = 5.0
     else:
+        
+        if cfg.BENCHMARK_TASK == "inter_arms_reach_v2":
+            cfg.REWARD.JOINT_ACC_WEIGHT = 0.0             # for inter-arms task, we don't need to enforce smoothness.
+
         cfg.TRAIN.EPISODE_LENGTH_S = 3.0
 
     if cfg.AGENT_NAME == "random":

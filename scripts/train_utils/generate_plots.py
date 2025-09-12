@@ -12,7 +12,6 @@ if __name__ == "__main__":
         choices=['reach', 'push']        # for ablation, we have just a table.
     )
     
-    
     args = parser.parse_args()
     
     if args.task in ['reach', 'arm3']:

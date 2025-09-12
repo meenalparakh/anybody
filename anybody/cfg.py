@@ -62,6 +62,7 @@ _C.TRAIN_CHECKPOINT = None
 _C.IS_FINETUNING = False
 _C.EVAL_ON_TEST = False
 _C.SCRATCH_TRAIN_TEST = False
+_C.EVAL_CLUSTER_ON_LOCAL = False
 
 # --------------------------------------------------------------------------- #
 # Environment Options

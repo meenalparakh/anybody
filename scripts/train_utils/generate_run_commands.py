@@ -77,6 +77,7 @@ def get_task_info(benchmark):
         'tasks': tasks,
         'n_subtasks': n_subtasks,
         'n_train_subtasks': n_train_subtasks,
+        'n_test_subtasks': n_test_subtasks,
         'project_name': project_name,
     }
 
@@ -88,8 +89,9 @@ if __name__ == "__main__":
     parser.add_argument("--output_file", type=str, default=None, help="Output file to write commands to")
     parser.add_argument("--neuronic", action='store_true', help="If set, use neuronic cluster script")
     parser.add_argument("--project_dir", type=str, default="/n/fs/pvl-procur/anybody", help="Project directory on the cluster")
-    parser.add_argument("--run_types", type=str, default="all", help="Type of runs to generate commands for. Options: all, mt-mlp, mt-tf, se-mlp, se-tf")
+    parser.add_argument("--run_types", type=str, default="all", help="Type of runs to generate commands for. Options: all, mt-mlp, mt-tf, se-mlp, se-tf, rand")
     parser.add_argument("--high_dim", action='store_true', help="If set, use pcd inputs for the task.")
+    parser.add_argument("--single_script", action='store_true', help="If set, generate a single script for all benchmarks.")
 
     args = parser.parse_args()
 
@@ -102,7 +104,7 @@ if __name__ == "__main__":
     project_dir = args.project_dir
 
     if args.run_types == 'all':
-        run_types = ['mt-mlp', 'mt-tf', 'se-mlp', 'se-tf']
+        run_types = ['mt-mlp', 'mt-tf', 'se-mlp', 'se-tf', 'rand']
     else:
         run_types = args.run_types.split('_')      # e.g. mt-mlp_se-tf_se-mlp
 
@@ -118,6 +120,10 @@ if __name__ == "__main__":
         benchmarks = [args.benchmark]
 
     total_runs = 0
+    
+    if args.single_script:
+        all_commands = []
+        all_commands_output_path = get_experiment_scripts_dir() / f"{run_dir}/all.sh"
 
     for benchmark in benchmarks:
         args.benchmark = benchmark
@@ -143,6 +149,13 @@ if __name__ == "__main__":
         suffix = " OBSERVATION.HIGH_DIM True AGENT.PPO.MINI_BATCHES 16" if args.high_dim else ""
 
 
+        if 'rand' in run_types and ('push' not in args.benchmark):
+            RUN_TEMPLATE = f"{slurm_script} {short_name}_0 {project_dir} COMMAND"
+            cfg_name = get_cfg_name(args.benchmark, "mlp", se=False)
+            cmd = f"scripts/run.py --headless BENCHMARK_TASK {args.benchmark} OVERRIDE_CFGNAME {cfg_name} AGENT_NAME random EXPERIMENT_NAME random GROUP_RUN_NAME random RUN_SEED 0"
+            commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
+
+
         if 'mt-tf' in run_types:
             RUN_TEMPLATE = f"{slurm_script} {short_name}_1 {project_dir} COMMAND"
             # mt tf run
@@ -163,10 +176,12 @@ if __name__ == "__main__":
         # example command: python scripts/run.py --headless OVERRIDE_CFGNAME experiment_cfgs/se.yaml SE_TASK simple_bot/r40_v1/reach RUN_SEED 42 PROJECT_NAME isbrv EXPERIMENT_NAME simple_bot-r40_v1-reach-42 
         task_info = get_task_info(args.benchmark)    
         total_num_envs = task_info['n_train_subtasks'] * 128            # MT runs have 128 envs per task
-        
+        n_total = task_info['n_subtasks']
+        n_train = task_info['n_train_subtasks']
+
         # for reach, we use diff-ik baselines.
         for seed in seeds[:1]:
-            for robot, var, task in zip(task_info['robots'], task_info['variations'], task_info['tasks']):
+            for se_idx, (robot, var, task) in enumerate(zip(task_info['robots'], task_info['variations'], task_info['tasks'])):
                 
                 # ts = 200000 if "reach" in args.benchmark else 1000000
 
@@ -191,12 +206,30 @@ if __name__ == "__main__":
                     commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
                 
                 
-        print(f"Writing {len(commands)} commands to {output_path}")
-        with open(output_path, 'w') as f:
-            f.write("#!/bin/bash\n\n")
-            for cmd in commands:
-                f.write(cmd + "\n")
-                
+                if ('rand' in run_types) and ('push' not in args.benchmark):
+                    # only for the test task, as not covered by MT runs
+                    if se_idx >= n_train:
+                        RUN_TEMPLATE = f"{slurm_script} {short_name}_0 {project_dir} COMMAND"
+                        cfg_name = get_cfg_name(args.benchmark, "mlp", se=True)
+                        cmd = f"{base_cmd} EXPERIMENT_NAME {robot}-{var}-{task}-rand GROUP_RUN_NAME random OVERRIDE_CFGNAME {cfg_name} AGENT_NAME random"
+                        commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))                        
+
+
+        if not args.single_script:
+            print(f"Writing {len(commands)} commands to {output_path}")
+            with open(output_path, 'w') as f:
+                f.write("#!/bin/bash\n\n")
+                for cmd in commands:
+                    f.write(cmd + "\n")
+        else:
+            all_commands.extend(commands)
+                    
         total_runs += len(commands)
 
     print(f"Total runs: {total_runs}")
+    if args.single_script:
+        print(f"Writing all {len(all_commands)} commands to {all_commands_output_path}")
+        with open(all_commands_output_path, 'w') as f:
+            f.write("#!/bin/bash\n\n")
+            for cmd in all_commands:
+                f.write(cmd + "\n")

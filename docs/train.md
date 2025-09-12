@@ -111,6 +111,13 @@ To evaluate a policy using the differentiable IK module for reach task, use the 
 python scripts/train_utils/eval_IK.py BENCHMARK_TASK intra_simple_bot_reach OVERRIDE_CFGNAME experiment_cfgs/mt_mlp_reach.yaml
 ```
 
+### Random Agent 
+To evaluate a random agent for reach task, use the following command. (The override config file is used to make the config similar to learning agents, but most of it is irrelevant.)
+
+```bash
+python scripts/run.py BENCHMARK_TASK intra_simple_bot_reach OVERRIDE_CFGNAME experiment_cfgs/mt_mlp_reach.yaml AGENT_NAME random EXPERIMENT_NAME random GROUP_RUN_NAME random
+```
+
 ### Multi-Task Evaluation
 
 Evaluate a trained policy on the morphologies it was trained on (works for both single- and multi-embodiment):

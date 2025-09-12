@@ -23,6 +23,9 @@ def get_robot_morphs_dir():
 def get_metrics_log_dir():
     return get_src().parents[0] / "metrics_logs"
 
+def get_wandb_csv_dir():
+    return get_src().parents[0] / "wandb_csvs"
+
 def get_benchmark_cfgs_dir():
     return get_src() / "anybody" / "envs" / "benchmark_cfgs"
 
@@ -85,3 +88,6 @@ def get_wandb_fname():
         return path1
     else:
         return Path(os.environ["ISAACLAB_PATH"]) / "wandb_key.txt"
+    
+def get_synced_slurm_logs_dir():
+    return get_src().parents[0] / "slurm" / "logs"
