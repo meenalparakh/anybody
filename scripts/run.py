@@ -389,13 +389,16 @@ def load_cfg():
         # assert cfg.EVAL, (
         #     "cfg.EVAL is True must be true. (just a sanity check)"
         # )
-        cfg.EVAL = True
 
         cfg.EVAL_CHECKPOINT = format_ckpt_path(cfg.EVAL_CHECKPOINT)
         config_path = Path(cfg.EVAL_CHECKPOINT).parents[1] / "config.yaml"
         cfg.merge_from_file(config_path)
+        cfg.EVAL = True
         
-        
+    # to again enforce the command line arguments OVER the loaded config file 
+    # as it includes OVERRIDE_CFGNAME, which the loaded config might have changed.
+    cfg.merge_from_list(args_cli.opts)
+
     # load override configs (useful for running experiments with different configurations)
     if not is_none(cfg.OVERRIDE_CFGNAME):
         # if override_cfgname path is absolute, then use it as is

@@ -17,7 +17,7 @@ TRAINER:
 AGENT:
   EXPERIMENT:
     CHECKPOINT_INTERVAL: 12000  # Skip checkpointing during evaluation
-    WRITE_INTERVAL: 500
+    WRITE_INTERVAL: 1000
     
 CURRICULUM:
   ACTIVE: false

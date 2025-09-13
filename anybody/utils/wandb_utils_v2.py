@@ -1,137 +1,11 @@
-#!/usr/bin/env python3
-"""
-wandb_collect.py
-
-Usage:
-    python wandb_collect.py --project my_project --entity my_entity --outdir ./out --metric_substr score
-
-What it does:
-1. Fetches all runs in a W&B project.
-2. Groups them by run.group.
-3. Writes a shell script of "recreate" commands for each run.
-4. Finds eval groups (groups with "eval" in their name).
-5. For each eval group:
-   - Collects all metrics whose name contains `metric_substr`.
-   - Multi-task runs: average across those metrics per run, then average across runs.
-   - Per-task runs: only one metric → average across runs directly.
-6. Saves summary CSV with columns:
-   [project, group, metric, mean, std, n_runs].
-"""
-
-import argparse
 import os
-import math
-from collections import defaultdict
-from typing import Any
+from anybody.utils.path_utils import get_wandb_csv_dir, get_experiment_scripts_dir
+from anybody.utils.utils import load_pickle, save_pickle
 import wandb
 import pandas as pd
-from anybody.utils.path_utils import get_wandb_csv_dir
 
-
-def safe_scalar(v: Any):
-    return isinstance(v, (int, float, str, bool)) and not (
-        isinstance(v, float) and math.isnan(v)
-    )
-
-
-def flatten_config_for_cli(cfg: dict):
-    """Return CLI args for scalar config entries."""
-    pairs = []
-    for k, v in cfg.items():
-        if k.startswith("_"):
-            continue
-        if safe_scalar(v):
-            if isinstance(v, bool):
-                pairs.append(f"--{k}" if v else f"--no-{k}")
-            else:
-                val = str(v)
-                if " " in val:
-                    val = f"'{val}'"
-                pairs.append(f"--{k} {val}")
-    return pairs
-
-
-def construct_command_from_run(run):
-    cfg = dict(run.config or {})
-    program = None
-    for candidate in ["program", "script", "entry_point", "cmd", "command"]:
-        if candidate in cfg and isinstance(cfg[candidate], str):
-            program = cfg[candidate]
-            break
-    if not program:
-        program = "train.py"
-
-    cli_parts = [program]
-    cli_parts += flatten_config_for_cli(cfg)
-
-    proj = f"{run.entity}/{run.project}" if run.entity else run.project
-    if proj:
-        cli_parts.append(f"--wandb_project {proj}")
-    cli_parts.append(f"--wandb_run_id {run.id}")
-
-    return "python " + " ".join(cli_parts)
-
-
-def summarize_eval_groups(groups, project):
-    """
-    Summarize eval groups: for each group, collect metrics containing metric_substr.
-    Multi-task agents: average across multiple metrics.
-    Per-task agents: use single metric.
-    """
-    summary_rows = []
-
-    for gname, runs_list in sorted(groups.items()):
-        print(f"Processing eval group: {gname} ({len(runs_list)} runs)")
-        run_values = []
-
-        for run in runs_list:
-            try:
-                hist: pd.DataFrame = run.history(samples=10000000)
-            except Exception as e:
-                print(f"  Warning: history fetch failed for run {run.id}: {e}")
-                continue
-
-            if hist is None or hist.empty:
-                continue
-
-            # find relevant metric columns
-            metric_cols = [
-                c for c in hist.columns if is_metric_column(project, c) and not c.startswith("_")
-            ]
-            if not metric_cols:
-                continue
-
-            per_run_vals = []
-            for col in metric_cols:
-                vals = pd.to_numeric(hist[col], errors="coerce").dropna().tolist()
-                per_run_vals.extend(vals)
-
-            if not per_run_vals:
-                continue
-
-            # average across metrics for this run
-            run_mean = float(pd.Series(per_run_vals).mean())
-            run_values.append(run_mean)
-
-        if not run_values:
-            continue
-
-        group_mean = float(pd.Series(run_values).mean())
-        group_std = float(pd.Series(run_values).std(ddof=0))
-
-        summary_rows.append(
-            {
-                "project": project,
-                "group": gname,
-                # "metric": metric_substr,
-                "metric": ""
-                "mean": group_mean,
-                "std": group_std,
-                "n_runs": len(run_values),
-            }
-        )
-
-    return pd.DataFrame(summary_rows)
+# given a project name,
+# collect a list of all runs in that project, and their corresponding group, and the config 
 
 def is_metric_column(project: str, col: str):
     if "reach" in project.lower():
@@ -141,70 +15,189 @@ def is_metric_column(project: str, col: str):
     if "task" in project.lower():
         return ("Success rate" in col) or ("robo_0_ee" in col)
 
+    return False
 
-def collect_project(entity: str, project: str, outdir: str):
+def collect_runs(project_name, force=False):
+    save_path = get_wandb_csv_dir() / f"{project_name}_runs.pkl"
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if save_path.exists() and not force:
+        print(f"Loading previously saved runs info from {save_path}")
+        return load_pickle(save_path)
+
+    entity = "meenalp_project"
     api = wandb.Api()
-    path = f"{entity}/{project}" if entity else project
-    print(f"Querying wandb runs for: {path} ...")
 
-    runs = list(api.runs(path))
-    print(f"Total runs fetched: {len(runs)}")
+    # Fetch all runs in the project
+    runs = api.runs(f"{entity}/{project_name}")
+    runs_info = {}
 
-    groups = defaultdict(list)
     for run in runs:
-        group_name = run.group if getattr(run, "group", None) else "__ungrouped__"
-        groups[group_name].append(run)
+        # Extract relevant information from each run
+        run_id = run.id
+        run_group = run.group
 
-    # 1) Create shell script of commands
-    os.makedirs(outdir, exist_ok=True)
-    cmdfile = os.path.join(outdir, f"commands_{project}.sh")
-    with open(cmdfile, "w") as fh:
-        fh.write("#!/usr/bin/env bash\n")
-        fh.write(f"# Commands generated from W&B project: {path}\n\n")
-        for gname, runs_list in sorted(groups.items()):
-            fh.write(f"### GROUP: {gname}  (runs: {len(runs_list)})\n")
-            for run in runs_list:
-                try:
-                    cmd = construct_command_from_run(run)
-                except Exception as e:
-                    cmd = f"# could not construct command for run {run.id}: {e}"
-                fh.write(cmd + "\n")
-            fh.write("\n")
-    os.chmod(cmdfile, 0o755)
-    print(f"Wrote command script to: {cmdfile}")
+        # Fetch the history (time-series data) for the run
+        history = run.history()
+        metrics = [col for col in history.columns if is_metric_column(project_name, col)]
+        metrics.sort()
+        
+        if len(metrics) == 0:
+            print(f"Run ID: {run_id}/{run.name}/{run_group} - No relevant metrics found. Skipping.")
+            continue
 
-    # 2) Summarize eval groups
-    eval_groups = {k: v for k, v in groups.items() if "eval" in k.lower()}
-    print(f"Found {len(eval_groups)} eval groups (name contains 'eval').")
-
-    df_summary = summarize_eval_groups(eval_groups, project, metric_substr=metric_substr)
-    out_csv = os.path.join(outdir, f"{project}.csv")
-    df_summary.to_csv(out_csv, index=False)
-    print(f"Wrote eval summary CSV to: {out_csv}")
-
-    return cmdfile, out_csv
+        run_directory = run.config["AGENT"]["EXPERIMENT"]["DIRECTORY"]
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Collect wandb runs, create commands, and summarize eval groups."
-    )
-    parser.add_argument("--project", required=True, help="W&B project name")
-    parser.add_argument(
-        "--entity",
-        default="meenalp_project",
-        help="W&B entity (user/org).",
-    )
-    parser.add_argument(
-        "--outdir", default="./wandb_out", help="Output directory for results"
-    )
-    parser.add_argument(
-        "--metric_substr",
-        default="score",
-        help="Substring to match relevant metrics (default: 'score')",
-    )
-    args = parser.parse_args()
-    args.outdir = get_wandb_csv_dir()
+        if run_group not in runs_info:
+            runs_info[run_group] = {}
 
-    entity = args.entity if args.entity else None
-    collect_project(entity, args.project, args.outdir, args.metric_substr)
+        runs_info[run_group][run_id] = (run.name, run_directory)
+        
+    # dump into a pickle file
+    save_pickle(runs_info, save_path)
+    print(f"Saved runs info to {save_path}")
+    return runs_info
+
+def is_eval_run(run_group: str):
+    if "eval" in run_group.lower():
+        return True
+    if "random" in run_group.lower():
+        return True
+    if "diff-ik" in run_group.lower():
+        return True
+    return False
+
+def get_renamed_cols(cols):
+    renamed_cols = []
+    
+    reach_metric = " / EpisodeInfo / Episode_Reward/robo_0_ee"
+    push_metric = "_push_simple / Episode / Success rate"
+    
+    for col in cols:
+        if reach_metric in col:
+            renamed_cols.append(col.replace(reach_metric, ""))
+        elif push_metric in col:
+            renamed_cols.append(col.replace(push_metric, ""))
+        else:
+            renamed_cols.append(col)
+    return renamed_cols
+
+
+def construct_train_df(project_name):
+    entity = "meenalp_project"
+    api = wandb.Api()
+
+    # Fetch all runs in the project
+    runs = api.runs(f"{entity}/{project_name}")
+
+    df = []
+
+    for run in runs:
+        # Extract relevant information from each run
+        run_id = run.id
+        run_group = run.group
+        
+        if is_eval_run(run_group):    
+            continue
+        
+        # for the run, record the last timestep, and the final value of each metric logged
+        history = run.history()
+        metrics = [col for col in history.columns if is_metric_column(project_name, col)]
+        metrics.sort()
+        
+        if len(metrics) == 0:
+            print(f"Run ID: {run_id}/{run.name}/{run_group} - No relevant metrics found. Skipping.")
+            continue
+        last_timestep = history['global_step'].max()
+        # obtain value of each metric at the last timestep
+        last_values = history[history['global_step'] == last_timestep]
+        
+        row = {
+            "run_name": run.name, "run_id": run_id,
+            "group": run_group,
+            "last_timestep": last_timestep,
+        }
+        for metric in metrics:
+            row[metric] = last_values[metric].values[0]
+            
+        df.append(row)
+        
+    # Construct main DataFrame
+    df = pd.DataFrame(df)
+    renamed_cols = get_renamed_cols(df.columns)
+    df.columns = renamed_cols
+    
+    save_path = get_wandb_csv_dir() / f"{project_name}_train_df.csv"
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(save_path, index=False)
+    print(f"Saved training DataFrame to {save_path}")
+    
+    return df
+
+
+def construct_eval_df(project_name, force=False):
+    save_path = get_wandb_csv_dir() / f"{project_name}_df.csv"
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    grouped_save_path = get_wandb_csv_dir() / f"{project_name}_grouped_df.csv"
+
+    if save_path.exists() and not force:
+        print(f"Loading previously saved runs info from {save_path}, {grouped_save_path}")
+        return pd.read_csv(save_path, index_col=0), pd.read_csv(grouped_save_path, index_col=0, header=[0,1])
+
+    entity = "meenalp_project"
+    api = wandb.Api()
+
+    # Fetch all runs in the project
+    runs = api.runs(f"{entity}/{project_name}")
+    runs_info = {}
+
+    df = []
+
+    for run in runs:
+        # Extract relevant information from each run
+        run_id = run.id
+        run_group = run.group
+        
+        if not is_eval_run(run_group):
+            continue            
+
+        # Fetch the history (time-series data) for the run
+        history = run.history()
+        metrics = [col for col in history.columns if is_metric_column(project_name, col)]
+        metrics.sort()
+        
+        if len(metrics) == 0:
+            print(f"Run ID: {run_id}/{run.name}/{run_group} - No relevant metrics found. Skipping.")
+            continue
+
+        # each run is a row, with columns: group, and the average value over the time steps for each metric that
+        # is available for that run.
+        row = {"run_name": run.name, "run_id": run_id,
+            "group": run_group}
+        for metric in metrics:
+            row[metric] = history[metric][1:].mean()   # skip the first value
+
+        df.append(row)
+        
+        
+    # Construct main DataFrame
+    df = pd.DataFrame(df)
+    renamed_cols = get_renamed_cols(df.columns)
+
+    df.columns = renamed_cols
+    df.to_csv(save_path, index=True)
+    print(f"Saved run-level DataFrame to {save_path}")
+
+    
+    # Grouped summary: mean and std for each metric per group
+    metric_cols = [col for col in df.columns if col not in ["group", "run_name", "run_id"]]
+    
+    # remove the columns that are non-metric, keeping only the group and metric columns
+    _df = df[["group"] + metric_cols]
+
+    df_grouped = _df.groupby("group")[metric_cols].agg(['mean', 'std', 'count'])
+    df_grouped.to_csv(grouped_save_path, index=True)
+    print(f"Saved grouped summary DataFrame to {grouped_save_path}")
+
+    return df, df_grouped
