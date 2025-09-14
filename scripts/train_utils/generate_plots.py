@@ -19,9 +19,11 @@ if __name__ == "__main__":
     
     if args.task in ['reach', 'arm3']:
         tasks_list = reach_tasks
+        group_indices = [0, 4, 5]
         def metric_fn(x): return "robo_0_ee" in x
     elif args.task == "push":
         tasks_list = push_tasks
+        group_indices = [0, 4, 6]
         def metric_fn(x): return ("Success rate" in x) or ("robo_0_ee" in x)
     elif args.task == "ablation":
         tasks_list = ablations_tasks
@@ -54,4 +56,4 @@ if __name__ == "__main__":
     )
     
     visualizer.create_subplots_bar2(
-        metric='mt', legend=False, group_indices=[0, 4, 6], task="reach", big=False, remove_group=None)
+        metric='mt', legend=False, group_indices=group_indices, task=args.task, big=False, remove_group=None)

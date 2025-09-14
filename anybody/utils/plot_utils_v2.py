@@ -136,392 +136,7 @@ METHOD_GOOD_NAMES = {
     "Tf-ft30": "Transformer (ft-30k)",
     "Mlp-ft30": "MLP (ft-30k)",
 }
-        
-        
-class EvaluationVisualizer:
-    """
-    A class to visualize evaluation results from a pandas DataFrame.
-
-    It generates bar graphs for average metric values per evaluation type
-    and a scatter plot showing individual metric values with point size
-    indicating the evaluation type.
-    """
-    def __init__(self, dataframe: pd.DataFrame, metric_set1: list, metric_set2: list, name="project"):
-        """
-        Initializes the EvaluationVisualizer.
-
-        Args:
-            dataframe (pd.DataFrame): DataFrame with methods as rows and metrics as columns.
-            metric_set1 (list): List of column names belonging to the first evaluation type.
-            metric_set2 (list): List of column names belonging to the second evaluation type.
-        """
-        self.df = dataframe
-        self.metric_set1 = metric_set1
-        self.metric_set2 = metric_set2
-        
-        # remove any columns that end in _reach (task_ur5 is the only one that has this)
-        self.metric_set1 = [col for col in self.metric_set1 if not col.endswith("_reach")]
-        self.metric_set2 = [col for col in self.metric_set2 if not col.endswith("_reach")]
-        
-        self.metric_set2_name = "Multi-Task Performance"
-        self.metric_set2_shortname = "Multi-task"
-        self.metric_set1_name = "Zero-Shot Performance"
-        self.metric_set1_shortname = "Zero-shot"
-        self.methods = self.df.index.tolist()
-        self.num_methods = len(self.methods)
-        self.name = name
-        
-    def construct_relative_df(self):
-        # use the last method name as the reference
-        # subtract the last method from all the other methods
-        reference_method = self.methods[-1]
-        reference_values = self.df.loc[reference_method]
-        
-        
-        relative_df = self.df.copy()
-        for method in self.methods:
-            relative_df.loc[method] = relative_df.loc[method] - reference_values
-            
-        # remove the last method from the list
-        relative_df = relative_df.drop(reference_method) 
-        self.relative_df = relative_df
-        self.relative_methods = relative_df.index.tolist()
-        self.relative_num_methods = len(self.relative_methods)   
-        
-    def create_bar_graphs2(self, relative=False, ind="bar", group_by="eval_type"):
-        if relative:
-            df = self.relative_df
-            methods = self.relative_methods
-            num_methods = self.relative_num_methods
-        else:
-            df = self.df
-            methods = self.methods
-            num_methods = self.num_methods
-
-        # Calculate averages for each metric set
-                
-        import pdb; pdb.set_trace()
-                
-        avg_set1 = df[self.metric_set1].mean(axis=1)
-        avg_set2 = df[self.metric_set2].mean(axis=1)
-
-        fig = go.Figure()
-
-        if group_by == "eval_type":
-            # x = [self.metric_set1_name, self.metric_set2_name]
-            x = [self.metric_set2_shortname, self.metric_set1_shortname]
-            
-            # color: one for each method
-            colors = sns.color_palette("GnBu", num_methods)  # Reverse the color palette
-            colors = [seaborn_color_to_rgb_string(color) for color in colors]
-            
-            colors_test = sns.color_palette("OrRd", num_methods)  # Reverse the color palette
-            colors_test = [seaborn_color_to_rgb_string(color) for color in colors_test]
-            
-            for idx, method in enumerate(methods[::-1]):            
-                if ind != "bar" and method == "Ind":
-                    continue
-                else:
-                    fig.add_trace(
-                        go.Bar(name=f"{METHOD_GOOD_NAMES[method]}", 
-                               x=x, y=[avg_set2[method], avg_set1[method]],
-                            marker_color=[colors[idx], colors_test[idx]], text=[f"{avg_set2[method]:.2f}", f"{avg_set1[method]:.2f}"],)
-                    )
-
-            if ind != 'bar':
-                # Add horizontal lines for each evaluation group
-                fig.add_trace(go.Scatter(
-                    x=[self.metric_set1_shortname, self.metric_set1_shortname],
-                    y=[avg_set1["Ind"], avg_set1["Ind"]],
-                    mode="lines",
-                    line=dict(color="black", width=1, dash="dash"),
-                    name="Ind Avg (ZS)"
-                ))
-                fig.add_trace(go.Scatter(
-                    x=[self.metric_set2_shortname, self.metric_set2_shortname],
-                    y=[avg_set2["Ind"], avg_set2["Ind"]],
-                    mode="lines",
-                    line=dict(color="black", width=1, dash="dash"),
-                    name="Ind Avg (MT)"
-                ))
-
-
-        elif group_by == "method":
-            x = methods
-            # choose two colors: one darker of the other
-            color1 = sns.color_palette("GnBu")[0]  # Reverse the color palette
-            color2 = sns.color_palette("GnBu")[3]  # Reverse the color palette
-            color1 = seaborn_color_to_rgb_string(color1)
-            color2 = seaborn_color_to_rgb_string(color2)
-            
-            fig.add_trace(
-                go.Bar(name=self.metric_set1_name, x=x, y=avg_set1, marker_color=color1, text=[f"{val:.3f}" for val in avg_set1])
-            )
-            fig.add_trace(
-                go.Bar(name=self.metric_set2_name, x=x, y=avg_set2, marker_color=color2, text=[f"{val:.3f}" for val in avg_set2])
-            )
-            
-        # Update layout
-        fig.update_layout(
-            barmode="group",
-            yaxis=dict(
-                zeroline=True,             # Enable the zero line
-                zerolinewidth=2,        # Set the width of the zero line
-                zerolinecolor='red'      # Set the color of the zero line
-            )
-        )
-
-        # save the figure
-        w, h = 640, 480
-        get_figures_dir().mkdir(parents=True, exist_ok=True)
-        fig.write_image(str(get_figures_dir() / f"{self.name}_bar_plot2.png"), width=w, height=h)
-        # fig.show()
-        return fig
-        
-    
-    def create_bar_graphs(self, relative=False):
-        """
-        Generates bar graphs showing the average of each metric set per method.
-        """
-        
-        if relative:
-            df = self.relative_df
-            methods = self.relative_methods
-            num_methods = self.relative_num_methods
-            
-        else:
-            df = self.df
-            methods = self.methods
-            num_methods = self.num_methods
-        
-        
-        avg_set1 = df[self.metric_set1].mean(axis=1)
-        avg_set2 = df[self.metric_set2].mean(axis=1)
-
-        fig = make_subplots(rows=1, cols=2, subplot_titles=(self.metric_set1_name, self.metric_set2_name))
-        
-        colors = sns.color_palette("GnBu", num_methods)[::-1]  # Reverse the color palette
-        colors = [seaborn_color_to_rgb_string(color) for color in colors]
-
-        colors_test = sns.color_palette("GnBu", num_methods)[::-1]  # Reverse the color palette
-        colors_test = [seaborn_color_to_rgb_string(color) for color in colors_test]
-
-        fig.add_trace(go.Bar(x=methods, y=avg_set1, name=self.metric_set1_name,
-                     marker_color=colors_test), row=1, col=1)
-        fig.add_trace(go.Bar(x=methods, y=avg_set2, name=self.metric_set2_name,
-                     marker_color=colors), row=1, col=2)
-
-        fig.update_layout(title_text="Average Metric Values per Evaluation Type", showlegend=False)
-        fig.update_xaxes(title_text="Agent")
-        fig.update_yaxes(title_text="Average Value")
-        w, h = 640, 480
-        get_figures_dir().mkdir(parents=True, exist_ok=True)
-        fig.write_image(str(get_figures_dir() / f"{self.name}_bar_plot.png"), width=w, height=h)
-                
-        return fig
-    
-    def create_bar_graphs3(self, relative=True):
-        if relative:
-            df = self.relative_df
-            methods = self.relative_methods
-            num_methods = self.relative_num_methods
-        else:
-            df = self.df
-            methods = self.methods
-            num_methods = self.num_methods
-
-        fig = go.Figure()
-
-        # Generate colors for each method
-        colors = sns.color_palette("GnBu", num_methods)  # Reverse the color palette
-        colors = [seaborn_color_to_rgb_string(color) for color in colors][::-1]
-
-        colors_test = sns.color_palette("OrRd", num_methods)  # Reverse the color palette
-        colors_test = [seaborn_color_to_rgb_string(color) for color in colors_test][::-1]
-
-        # create two subplots, one for each evaluation set
-        fig = make_subplots(rows=1, cols=2, subplot_titles=(self.metric_set1_name, self.metric_set2_name),
-                            column_widths=[1, 6])
-        
-        # for metric set 1
-        for i, method in enumerate(methods):
-            x_set1 = self.metric_set1
-            y_set1 = df.loc[method, self.metric_set1].tolist()
-            fig.add_trace(go.Bar(
-                x=x_set1,
-                y=y_set1,
-                name=f"{method} (ZS)",
-                marker_color=colors_test[i]
-            ), row=1, col=1)
-            
-        # for metric set 2
-        for i, method in enumerate(methods):
-            x_set2 = self.metric_set2
-            y_set2 = df.loc[method, self.metric_set2].tolist()
-            fig.add_trace(go.Bar(
-                x=x_set2,
-                y=y_set2,
-                name=f"{method} (MT)",
-                marker_color=colors[i]
-            ), row=1, col=2)
-
-        fig.update_layout(
-            barmode='group',  # Group bars for each method
-            plot_bgcolor='ghostwhite',  # Sets the background color for the plot
-            title=self.name,
-            title_x=0.5,  # Center the title
-            xaxis_title="Metrics",
-            yaxis_title="Reward"
-        )
-        
-        # update legend style (black border, white background)
-        fig.update_layout(
-            legend=dict(
-                x=0.07,  # Position the legend to the right of the plot
-                y=1.0,  # Align the legend to the top
-                xanchor="left",  # Anchor the legend's x position to the left
-                yanchor="top",  # Anchor the legend's y position to the top
-                font=dict(size=12),  # Set font size for the legend
-                bgcolor="rgba(255, 255, 255, 0.8)",  # Set a semi-transparent background for the legend
-                bordercolor="black",  # Add a border color
-                borderwidth=1,  # Set the border width
-            )
-        )
-        
-        # fig.show()
-        
-        w, h = 640, 480
-        get_figures_dir().mkdir(parents=True, exist_ok=True)
-        fig.write_image(str(get_figures_dir() / f"{self.name}_bargraph3.png"), width=w, height=h)
-        
-        fig.show()
-        return fig
-
-    def create_scatter_plot(self, relative=False):
-        """
-        Generates a scatter plot showing individual metric values for each method.
-        Point size is larger for metrics in the first evaluation set.
-        """
-        if relative:
-            df = self.relative_df
-            methods = self.relative_methods
-            num_methods = self.relative_num_methods
-        else:
-            df = self.df
-            methods = self.methods
-            num_methods = self.num_methods
-        
-        fig = go.Figure()
-
-        colors = sns.color_palette("GnBu", num_methods)[::-1]  # Reverse the color palette
-        colors = [seaborn_color_to_rgb_string(color) for color in colors]
-
-        for i, method in enumerate(methods):
-            x_set1 = self.metric_set1
-            y_set1 = df.loc[method, self.metric_set1].tolist()
-            fig.add_trace(go.Scatter(x=x_set1, y=y_set1, mode='markers',
-                                    marker=dict(size=15, color=colors[i]),
-                                    name=f'{method} (ZS)'))
-
-            x_set2 = self.metric_set2
-            y_set2 = df.loc[method, self.metric_set2].tolist()
-            fig.add_trace(go.Scatter(x=x_set2, y=y_set2, mode='markers',
-                                    marker=dict(size=8, color=colors[i]),
-                                    name=f'{method} (MT)',
-                                    showlegend=False)) # Hide legend for the second set to avoid repetition
-
-        fig.update_layout(title="Individual Metric Values per Method",
-                          xaxis_title="Metrics",
-                          yaxis_title="Value")
-        fig.show()
-            
-    def create_scatter_plot2(self, relative=False):
-        """
-        Generates a scatter plot showing individual metric values for each method.
-        Points are connected by lines for the same method, and point size is larger for metrics in the first evaluation set.
-        """
-        if relative:
-            df = self.relative_df
-            methods = self.relative_methods
-            num_methods = self.relative_num_methods
-        else:
-            df = self.df
-            methods = self.methods
-            num_methods = self.num_methods
-
-        fig = go.Figure()
-
-
-        colors_test = sns.color_palette("OrRd", 2)  # Reverse the color palette
-        colors_test = [seaborn_color_to_rgb_string(color) for color in colors_test]
-
-        methods = ["Mlp", "Tf"]
-        
-        x_vals = [0, 10000, 30000]
-        
-        # select the index which is nan
-        
-        check1 = df.loc['Mlp-ft10', self.metric_set1[-1]]
-        if np.isnan(check1):
-            idx = 0
-        else:
-            idx = -1
-        
-        mlp_y_vals = [df.loc["Mlp", self.metric_set1[idx]], 
-                  df.loc["Mlp-ft10", self.metric_set1[idx]], 
-                  df.loc["Mlp-ft30", self.metric_set1[idx]], ]
-
-        tf_y_vals = [df.loc["Tf", self.metric_set1[idx]],
-                df.loc["Tf-ft10", self.metric_set1[idx]], 
-                df.loc["Tf-ft30", self.metric_set1[idx]], ]
-        
-        reference = df.loc["Ind", self.metric_set1[idx]]
-        
-        # create a dashed line for the reference
-        fig.add_trace(go.Scatter(
-            x=x_vals,
-            y=[reference] * len(x_vals),
-            mode='lines',
-            line=dict(color="black", width=1, dash="dash"),
-            name="SE (test)"
-        ))
-    
-        # create scatter points for MLP
-        fig.add_trace(go.Scatter(
-            x=x_vals,
-            y=mlp_y_vals,
-            mode='markers+lines',
-            marker=dict(size=15, color=colors_test[0]),
-            line=dict(color=colors_test[0], width=2),
-            name="MLP"
-        ))
-        
-        # create scatter points for TF
-        fig.add_trace(go.Scatter(
-            x=x_vals,
-            y=tf_y_vals,
-            mode='markers+lines',
-            marker=dict(size=15, color=colors_test[1]),
-            line=dict(color=colors_test[1], width=2),
-            name="Transformer"
-        ))
-    
-        fig.update_layout(
-            title=self.name,
-            # set location title to top center
-            title_x=0.5,
-            xaxis_title="# Finetuning Steps",
-            yaxis_title="Task Score"
-        )
-        # fig.show()
-        
-        w, h = 640, 480
-        get_figures_dir().mkdir(parents=True, exist_ok=True)
-        fig.write_image(str(get_figures_dir() / f"{self.name}_scatter_plot.png"), width=w, height=h)
-        
-        return fig
-    
-        
+         
 class SubplotVisualizer:
     """
     A class to visualize multiple scatter plots side by side for different pandas DataFrames.
@@ -538,8 +153,8 @@ class SubplotVisualizer:
         """
         self.dataframes = dataframes
         self.names = names
-            
-    def create_grouped_bargraphs(self, dfs, benchmark_task_names, methods, metric="mt", category="cat"):
+
+    def create_grouped_bargraphs(self, dfs, benchmark_task_names, methods, metric="mt", category="cat", show_y_ticks=True):
         # methods = dfs[0].index.tolist()
         if metric == "mt":
             if "Tf-ft10" in methods:
@@ -617,6 +232,12 @@ class SubplotVisualizer:
             ),
             # margin=dict(l=0, r=0, t=0, b=0),  # Remove margins
         )
+        
+        if show_y_ticks:
+            fig.update_yaxes(tickfont=dict(size=10))
+        else:
+            fig.update_yaxes(showticklabels=False)
+        
         # Show the combined figure
         # w, h = 640, 480
         # get_figures_dir().mkdir(parents=True, exist_ok=True)
@@ -671,7 +292,8 @@ class SubplotVisualizer:
             names = self.names[start_idx:end_idx[subpplot_idx]]
             
             
-            grouped_fig = self.create_grouped_bargraphs(dfs, names, methods, metric=metric, category=category_names[subpplot_idx])
+            grouped_fig = self.create_grouped_bargraphs(dfs, names, methods, metric=metric, category=category_names[subpplot_idx],
+                                                        show_y_ticks=(subpplot_idx == 0))
             # Add traces to the subplot
             for trace in grouped_fig.data:
                 # Hide the legend for all subplots except the first one
@@ -705,7 +327,7 @@ class SubplotVisualizer:
             xaxis=dict(automargin=True),
             yaxis=yaxis_dict,
             yaxis2=yaxis_dict,
-            margin=dict(l=1, r=1, t=1, b=30),  # Remove margins
+            margin=dict(l=1, r=1, t=1 if task == 'reach' else 30, b=30),  # Remove margins
         )
 
         if n_cols == 3:
@@ -715,12 +337,16 @@ class SubplotVisualizer:
     
         # if task == "push":
         fig.update_yaxes(range=[0.0, 1.0])
-            # self.add_category_legend(fig)
+        # make ticks every 0.2
+        fig.update_yaxes(dtick=0.2)
+
+        if task != 'reach':
+            self.add_category_legend(fig)
 
         self.draw_bounding_box(fig)
 
         pdf_width_in = 5.0
-        pdf_height_in = 2.0
+        pdf_height_in = 2.0 if task == 'reach' else 3.0
         dpi = 75
         fig_width = int(pdf_width_in * dpi)
         fig_height = int(pdf_height_in * dpi)
