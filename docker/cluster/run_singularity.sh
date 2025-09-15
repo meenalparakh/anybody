@@ -153,4 +153,6 @@ singularity_cmd+=("bash" "-c" "cd /workspace/anybody && /isaac-sim/python.sh $2 
 
 "${singularity_cmd[@]}"
 
+rm -rf $WORK_DIR
+
 echo "(run_singularity.py): Return"

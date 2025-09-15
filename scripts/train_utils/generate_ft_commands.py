@@ -37,13 +37,8 @@ def is_mt_run(ckpt_dir, run_name):
         return True
     else:
         return False
-    # cfg_path = ckpt_dir.parent.parent / "config.yaml"
-    # with open(cfg_path, 'r') as f:
-    #     cfg = 
     
-    
-
-def load_checkpoints(project_name, force=False, local_checkpoints=False, ft_runs=False):
+def load_checkpoints(project_name, force=False, local_checkpoints=False):
     runs_info = collect_runs(project_name, force=force)
     
     checkpoint_dict = {}
@@ -54,9 +49,6 @@ def load_checkpoints(project_name, force=False, local_checkpoints=False, ft_runs
     #         runs = runs_info[group]
     #         for run_id, (run_name, _) in runs.items():
     #             eval_runs.append(run_name)
-    min_threshold = 300000 if not ft_runs else 10000 
-    chosen_ft_timestep = 30000
-
 
     for group in runs_info:
         
@@ -66,9 +58,6 @@ def load_checkpoints(project_name, force=False, local_checkpoints=False, ft_runs
         
         for run_id, (run_name, run_directory) in runs_info[group].items():
             
-            
-            if ft_runs and ("ft" not in run_name.lower()):
-                continue
             
             # if run-name is already there, continue
             if run_name in [v[0] for v in checkpoint_dict.values()]:
@@ -89,7 +78,7 @@ def load_checkpoints(project_name, force=False, local_checkpoints=False, ft_runs
                 continue
             latest_timestep = max(timesteps)
 
-            if latest_timestep < min_threshold:
+            if latest_timestep < 300000:
                 # print(f"Latest checkpoint timestep {project_name}: {group} {latest_timestep} is less than 500k, skipping")
                 continue
             
@@ -97,8 +86,6 @@ def load_checkpoints(project_name, force=False, local_checkpoints=False, ft_runs
                 with open("remaining_runs.txt", 'a') as fs:
                     fs.write(f"{short_name} {project_name}: {run_name} has {latest_timestep} steps.\n")
                 
-            if ft_runs:
-                latest_timestep = chosen_ft_timestep
             
             checkpoint_directory = ckpt_dir / f"agent_{latest_timestep}.pt"
             # print(f"Run ID: {run_id}/{run_name} - Latest checkpoint at timestep {latest_timestep}: {checkpoint_directory}")
@@ -109,19 +96,6 @@ def load_checkpoints(project_name, force=False, local_checkpoints=False, ft_runs
 
     return checkpoint_dict
 
-
-ft_benchmark_names = [
-    'intra_panda_reach',
-    # 'intra_panda_push_simple',
-    
-    'inter_ee_arm_reach',
-    # 'inter_ee_arm_push_simple',
-    
-    # 'inter_task_ur5',
-    
-    'inter_arms_reach_v2',
-    # 'inter_arms_push_simple_v2',
-]
 
 
 if __name__ == "__main__":
@@ -136,7 +110,6 @@ if __name__ == "__main__":
     parser.add_argument("--force", action='store_true', help="If set, force re-collection of runs from wandb")
     parser.add_argument("--view_runs", action='store_true', help="If set, just view the runs collected from wandb and exit")
     parser.add_argument("--single_script", action='store_true', help="If set, write all commands to a single script")
-    parser.add_argument("--ft", action='store_true', help="If set, evaluate finetuned runs")
 
     args = parser.parse_args()
 
@@ -162,8 +135,6 @@ if __name__ == "__main__":
     
     if args.benchmark == 'all':
         benchmarks = all_benchmark_names 
-        if args.ft:
-            benchmarks = ft_benchmark_names
     else:
         benchmarks = [args.benchmark]
         
@@ -179,7 +150,7 @@ if __name__ == "__main__":
         short_name = short_names[benchmark] if benchmark in short_names else "X"
     
         if (not args.output_file) or (len(benchmarks) > 1):
-            args.output_file = f"{run_dir}/eval_" + args.benchmark
+            args.output_file = f"{run_dir}/ft_" + args.benchmark
         output_path = get_experiment_scripts_dir() / (args.output_file + ".sh")
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -191,20 +162,16 @@ if __name__ == "__main__":
         if args.cluster_local_eval:
             RUN_TEMPLATE = "python COMMAND"
         
-        ckpt_dict = load_checkpoints(args.benchmark, force=args.force, local_checkpoints=args.cluster_local_eval, ft_runs=args.ft)
+        ckpt_dict = load_checkpoints(args.benchmark, force=args.force, local_checkpoints=args.cluster_local_eval)
         print(f"Found {len(ckpt_dict)} checkpoints for benchmark {args.benchmark}")
 
         for run_id, (run_name, ckpt_path) in ckpt_dict.items():
 
             print(f"Run ID: {run_id} - Run Name: {run_name} - Checkpoint Path: {ckpt_path}")
-            eval_types = ['mt', 'zs']
-            if (not is_mt_run(ckpt_path, run_name)):
-                eval_types = ['mt']            
-            if args.ft:
-                eval_types = ['zs']  # only evaluate zs for ft runs (evalute on test task, as they are finetuned for it)
-
-            for eval_type in eval_types:
-                cmd = f"scripts/run.py --headless OVERRIDE_CFGNAME experiment_cfgs/eval_{eval_type}.yaml EVAL_CHECKPOINT {ckpt_path} EVAL_CLUSTER_ON_LOCAL {args.cluster_local_eval}"
+            
+            # finetuning is only for MT runs
+            if is_mt_run(ckpt_path, run_name):
+                cmd = f"scripts/run.py --headless OVERRIDE_CFGNAME experiment_cfgs/ft_mt.yaml EVAL_CHECKPOINT {ckpt_path} EVAL_CLUSTER_ON_LOCAL {args.cluster_local_eval}"
                 commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
 
 

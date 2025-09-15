@@ -12,7 +12,7 @@ TRAINER:
   TIMESTEPS: 10000
   EVAL_TIMESTEPS_INTERVAL: 5000
   EVAL_TIMESTEPS: 500
-  VIDEO_RENDER: true          # if running headless, need `--enable_cameras` flag.
+  VIDEO_RENDER: false          # if running headless, need `--enable_cameras` flag.
 
 AGENT:
   EXPERIMENT:

@@ -46,6 +46,14 @@ def set_cfg_mlp():
     cfg.MODEL.MLP.N_LAYERS = 3
     cfg.MODEL.LIMB_EMBED_SIZE = 16
 
+def set_cfg_mlp_big():
+    cfg.ACTION.DISCRETE = False
+    cfg.merge_from_file(get_global_cfgs_dir() / "experiment_cfgs/mt_mlp_reach.yaml")
+    
+    cfg.MODEL.MLP.EMBED_DIM = 192
+    cfg.MODEL.MLP.N_LAYERS = 3
+    cfg.MODEL.LIMB_EMBED_SIZE = 16
+
 
 if __name__ == "__main__":
     dummy_env = DummyEnv()
@@ -57,6 +65,11 @@ if __name__ == "__main__":
     print(f"Total parameters Tf: {total_params}")
 
     set_cfg_mlp()
+    models = get_models(env=dummy_env, device="cuda")
+    total_params = sum(p.numel() for p in models['policy'].parameters())
+    print(f"Total parameters Mlp: {total_params}")
+
+    set_cfg_mlp_big()
     models = get_models(env=dummy_env, device="cuda")
     total_params = sum(p.numel() for p in models['policy'].parameters())
     print(f"Total parameters Mlp: {total_params}")

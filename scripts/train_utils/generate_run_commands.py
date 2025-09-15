@@ -88,6 +88,7 @@ if __name__ == "__main__":
     parser.add_argument("--benchmark", type=str, required=True, help="Benchmark config to run")
     parser.add_argument("--output_file", type=str, default=None, help="Output file to write commands to")
     parser.add_argument("--neuronic", action='store_true', help="If set, use neuronic cluster script")
+    parser.add_argument("--local", action='store_true', help="If set, run locally without cluster script")
     parser.add_argument("--project_dir", type=str, default="/n/fs/pvl-procur/anybody", help="Project directory on the cluster")
     parser.add_argument("--run_types", type=str, default="all", help="Type of runs to generate commands for. Options: all, mt-mlp, mt-tf, se-mlp, se-tf, rand")
     parser.add_argument("--high_dim", action='store_true', help="If set, use pcd inputs for the task.")
@@ -150,11 +151,15 @@ if __name__ == "__main__":
 
 
         if 'rand' in run_types and ('push' not in args.benchmark):
-            RUN_TEMPLATE = f"{slurm_script} {short_name}_0 {project_dir} COMMAND"
+            RUN_TEMPLATE = "python COMMAND" if args.local else f"{slurm_script} {short_name}_0 {project_dir} COMMAND"
             cfg_name = get_cfg_name(args.benchmark, "mlp", se=False)
             cmd = f"scripts/run.py --headless BENCHMARK_TASK {args.benchmark} OVERRIDE_CFGNAME {cfg_name} AGENT_NAME random EXPERIMENT_NAME random GROUP_RUN_NAME random RUN_SEED 0"
             commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
 
+        if "diff-ik" in run_types and ('reach' in args.benchmark):
+            RUN_TEMPLATE = "python COMMAND" if args.local else f"{slurm_script} {short_name}_4 {project_dir} COMMAND"
+            cmd = f"scripts/train_utils/eval_IK.py --headless --enable_cameras BENCHMARK_TASK {args.benchmark} OVERRIDE_CFGNAME experiment_cfgs/mt_mlp_reach.yaml"
+            commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
 
         if 'mt-tf' in run_types:
             RUN_TEMPLATE = f"{slurm_script} {short_name}_1 {project_dir} COMMAND"
@@ -209,10 +214,24 @@ if __name__ == "__main__":
                 if ('rand' in run_types) and ('push' not in args.benchmark):
                     # only for the test task, as not covered by MT runs
                     if se_idx >= n_train:
-                        RUN_TEMPLATE = f"{slurm_script} {short_name}_0 {project_dir} COMMAND"
+                        RUN_TEMPLATE = "python COMMAND" if args.local else f"{slurm_script} {short_name}_0 {project_dir} COMMAND"
                         cfg_name = get_cfg_name(args.benchmark, "mlp", se=True)
                         cmd = f"{base_cmd} EXPERIMENT_NAME {robot}-{var}-{task}-rand GROUP_RUN_NAME random OVERRIDE_CFGNAME {cfg_name} AGENT_NAME random"
                         commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))                        
+                        
+                        
+                if ("diff-ik" in run_types) and ("reach" in args.benchmark):
+                    # only for the test task, as not covered by MT runs
+                    if se_idx >= n_train:
+                        RUN_TEMPLATE = "python COMMAND" if args.local else f"{slurm_script} {short_name}_4 {project_dir} COMMAND"
+                        cmd = f"scripts/train_utils/eval_IK.py --headless --enable_cameras SE_TASK {robot}/{var}/{task} OVERRIDE_CFGNAME experiment_cfgs/se_mlp.yaml PROJECT_NAME {task_info['project_name']} TRAIN.NUM_ENVS_PER_TASK {total_num_envs}"
+                        commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
+                
+                # diff-ik for individual runs - only for inter_task_ur5 
+                if (args.benchmark == 'inter_task_ur5') and ('diff-ik' in run_types) and (task == 'reach'):
+                    RUN_TEMPLATE = "python COMMAND" if args.local else f"{slurm_script} {short_name}_4 {project_dir} COMMAND"
+                    cmd = f"scripts/train_utils/eval_IK.py --headless --enable_cameras SE_TASK {robot}/{var}/{task} OVERRIDE_CFGNAME experiment_cfgs/se_mlp.yaml PROJECT_NAME {task_info['project_name']} TRAIN.NUM_ENVS_PER_TASK {total_num_envs}"
+                    commands.append(RUN_TEMPLATE.replace("COMMAND", cmd))
 
 
         if not args.single_script:

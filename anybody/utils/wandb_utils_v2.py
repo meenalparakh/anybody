@@ -8,6 +8,8 @@ import pandas as pd
 # collect a list of all runs in that project, and their corresponding group, and the config 
 
 def is_metric_column(project: str, col: str):
+    if col == "real_ur5_stick_v1_reach / Episode / Success rate":
+        return False
     if "reach" in project.lower():
         return ("robo_0_ee" in col)
     if "push" in project.lower():
@@ -18,14 +20,14 @@ def is_metric_column(project: str, col: str):
     return False
 
 def collect_runs(project_name, force=False):
-    save_path = get_wandb_csv_dir() / f"{project_name}_runs.pkl"
+    save_path = get_wandb_csv_dir() / f"{project_name}/runs.pkl"
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
     if save_path.exists() and not force:
         print(f"Loading previously saved runs info from {save_path}")
         return load_pickle(save_path)
 
-    entity = "meenalp_project"
+    entity = wandb.apis.public.Api().default_entity
     api = wandb.Api()
 
     # Fetch all runs in the project
@@ -72,7 +74,7 @@ def get_renamed_cols(cols):
     renamed_cols = []
     
     reach_metric = " / EpisodeInfo / Episode_Reward/robo_0_ee"
-    push_metric = "_push_simple / Episode / Success rate"
+    push_metric = " / Episode / Success rate"
     
     for col in cols:
         if reach_metric in col:
@@ -85,7 +87,7 @@ def get_renamed_cols(cols):
 
 
 def construct_train_df(project_name):
-    entity = "meenalp_project"
+    entity = wandb.apis.public.Api().default_entity
     api = wandb.Api()
 
     # Fetch all runs in the project
@@ -128,7 +130,7 @@ def construct_train_df(project_name):
     renamed_cols = get_renamed_cols(df.columns)
     df.columns = renamed_cols
     
-    save_path = get_wandb_csv_dir() / f"{project_name}_train_df.csv"
+    save_path = get_wandb_csv_dir() / f"{project_name}/train_df.csv"
     save_path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(save_path, index=False)
     print(f"Saved training DataFrame to {save_path}")
@@ -136,16 +138,35 @@ def construct_train_df(project_name):
     return df
 
 
-def construct_eval_df(project_name, force=False):
-    save_path = get_wandb_csv_dir() / f"{project_name}_df.csv"
+
+def update_group(method, current_group):
+    
+    if ("ft" in method) and ("zs_eval" in method):
+        # fine-tuning runs
+        # need to change the group based on the ft step (the suffix of method)
+        suffix = (method.split("_")[-1])
+        new_group = current_group + "_" + suffix 
+        return new_group
+
+    return current_group
+
+
+def construct_eval_df(project_name, force=False, ablation=False,
+                      min_timestep=None, max_timestep=None):
+    
+    save_path = get_wandb_csv_dir() / f"{project_name}/raw_eval_df.csv"
     save_path.parent.mkdir(parents=True, exist_ok=True)
-    grouped_save_path = get_wandb_csv_dir() / f"{project_name}_grouped_df.csv"
+    grouped_save_path = get_wandb_csv_dir() / f"{project_name}/grouped_eval_df.csv"
+
+    if ablation:
+        save_path = save_path.parent / "ablation_raw_eval_df.csv"
+        grouped_save_path = grouped_save_path.parent / "ablation_grouped_eval_df.csv"
 
     if save_path.exists() and not force:
         print(f"Loading previously saved runs info from {save_path}, {grouped_save_path}")
         return pd.read_csv(save_path, index_col=0), pd.read_csv(grouped_save_path, index_col=0, header=[0,1])
 
-    entity = "meenalp_project"
+    entity = wandb.apis.public.Api().default_entity
     api = wandb.Api()
 
     # Fetch all runs in the project
@@ -158,9 +179,21 @@ def construct_eval_df(project_name, force=False):
         # Extract relevant information from each run
         run_id = run.id
         run_group = run.group
-        
+                
         if not is_eval_run(run_group):
             continue            
+
+        if run_group not in ['random', 'diff-ik']:
+            if "ft" not in run.name:
+                if (min_timestep is not None) or (max_timestep is not None):
+                    eval_timestep = int(run.name.split("_")[-1])
+                    if min_timestep is not None:
+                        if eval_timestep < min_timestep:
+                            continue
+                    if max_timestep is not None:
+                        if eval_timestep > max_timestep:
+                            continue
+            
 
         # Fetch the history (time-series data) for the run
         history = run.history()
@@ -175,6 +208,7 @@ def construct_eval_df(project_name, force=False):
         # is available for that run.
         row = {"run_name": run.name, "run_id": run_id,
             "group": run_group}
+        
         for metric in metrics:
             row[metric] = history[metric][1:].mean()   # skip the first value
 
@@ -189,7 +223,12 @@ def construct_eval_df(project_name, force=False):
     df.to_csv(save_path, index=True)
     print(f"Saved run-level DataFrame to {save_path}")
 
-    
+    # change the group names for fine-tuning runs.
+    df['group'] = [
+        update_group(method, group)
+        for method, group in zip(df['run_name'], df['group'])
+    ]
+
     # Grouped summary: mean and std for each metric per group
     metric_cols = [col for col in df.columns if col not in ["group", "run_name", "run_id"]]
     
