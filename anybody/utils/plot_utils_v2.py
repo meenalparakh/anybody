@@ -35,7 +35,9 @@ def get_colors(task, metric, num_colors=2):
         else:
             colors = sns.color_palette("RdYlBu", 6)
             colors = [colors[-2], colors[-1]]
-    else:
+    elif task == 'reach-ft':
+        # mlp, mlp-ft10, mlp-ft30, mlp-ft50, tf, tf-ft10, tf-ft30, tf-ft50
+        return colors
         raise NotImplementedError("Task not recognized")
 
     return colors
@@ -201,9 +203,9 @@ class SubplotVisualizer:
         fig = go.Figure()
         
         # colors for metric 1 (darker shade)
-        colors = sns.color_palette('crest', 6)
+        colors = sns.color_palette('pink', 6)
         colors = [seaborn_color_to_rgb_string(color) for color in colors]
-        colors = [colors[0], colors[-1]]
+        colors = [colors[-1], colors[-2]]
 
         metric_good_names = {
             'mt': 'Multi-task',
@@ -213,8 +215,17 @@ class SubplotVisualizer:
         for idx, metric in enumerate(metrics):
             mus = [df.loc[method, (metric.upper(), 'mean')] for method in methods]
             stds = [df.loc[method, (metric.upper(), 'std')] for method in methods]
+            
+            stds = [s if s not in (0, None, np.nan, 0.0) else None for s in stds]
 
-            text = [f"{m:.2f} ± {s:.3f}" for m, s in zip(mus, stds)]
+
+            y_lower = np.array([m - s if s is not None else 0 for m, s in zip(mus, stds)])
+            yerr_minus_clipped = np.where(y_lower < 0, np.array(mus), np.array(stds))
+
+            text = [f"{m:.2f} ± {s:.3f}" if s is not None else f"{m:.2f}" for m, s in zip(mus, stds)]
+
+            # stds = [s * std_scale if s is not None else None for s in stds ]
+            # text = [f"{m:.2f} ± {s:.3f}" for m, s in zip(mus, stds)]
 
             fig.add_trace(
                 go.Bar(
@@ -223,19 +234,21 @@ class SubplotVisualizer:
                     x=methods,
                     y=mus,
                     error_y=dict(type='data', 
-                                 array=[2*s for s in stds], 
+                                 array=stds,
+                                 arrayminus=yerr_minus_clipped,
                                  thickness=0.75,
                                  color='black',
                                 #  width=6.0,
                                  visible=True),
                     marker_color=colors[idx],
                     text=text,  # Add text labels
-                    textangle=90,                 # rotate text
+                    textangle=-90,                 # rotate text
                     insidetextanchor="middle",    # align at bar center
                     textfont=dict(),  # Set text color to the group color
                     # textposition='inside'  # Position text labels inside the bars
                 )
             )
+
 
         fig.update_traces(textfont_size=TRACE_FONT_SIZE) #, cliponaxis=False)
         fig.update_layout(
@@ -244,57 +257,122 @@ class SubplotVisualizer:
         # set the y axis to be between 0 and 1
         fig.update_yaxes(range=[0.0, None])
         
+        # show y axis ticks and lines light gray
+        fig.update_yaxes(showline=True, linecolor='lightgray', gridcolor='lightgray', zeroline=True, zerolinecolor='black', zerolinewidth=1)
+        
         # create a black bounding box around the plot
         fig.update_layout(
-            barcornerradius=6,
-            # plot_bgcolor="white",
-            # font=dict(size=12),
-            margin=dict(l=1, r=1, t=10, b=30),  # Remove margins
+            barcornerradius=1,
+            plot_bgcolor="white",
+            margin=dict(l=1, r=1, t=1, b=20),  # Remove margins
             xaxis=dict(
                 automargin=True
-            ),
-            yaxis=dict(
-                automargin=True,
-                dtick=0.1
             ),
             legend=dict(
                 x=1.0,  # Position the legend to the right of the plot
                 y=1.0,  # Align the legend to the top
                 xanchor="right",  # Anchor the legend's x position to the left
-                yanchor="top",  # Anchor the legend's y position to the top
+                yanchor="bottom",  # Anchor the legend's y position to the top
                 font=dict(size=LEGEND_FONT_SIZE),  # Set font size for the legend
-                bgcolor="rgba(255, 255, 255, 0.4)",  # Set a semi-transparent background for the legend
-                # bordercolor="black",  # Add a border color
-                # borderwidth=1,  # Set the border width
+                bgcolor="rgba(255, 255, 255, 0.0)",  # Set a semi-transparent background for the legend
+                # horizontal orientation
+                orientation="h",
             ),
         )
         
+        fig.update_xaxes(tickfont=dict(size=TRACE_FONT_SIZE))
+        fig.update_yaxes(tickfont=dict(size=TRACE_FONT_SIZE))
+        yaxis_dict = {
+            "zeroline": True,             # Enable the zero line
+            "zerolinewidth": 2,        # Set the width of the zero line
+            "zerolinecolor": 'black',      # Set the color of the zero line
+            'range': [0.0, None],
+        }
+        fig.update_yaxes(yaxis_dict)
+        self.draw_bounding_box_individual(fig)
         
-        # Add a rectangular boundary with rounded corners (via path)
-        # path = "M 0.02,0.02 Q 0.02,0 0.04,0 L 0.96,0 Q 0.98,0 0.98,0.02 L 0.98,0.98 Q 0.98,1 0.96,1 L 0.04,1 Q 0.02,1 0.02,0.98 Z"
-
-        # fig.add_shape(
-        #     type="path",
-        #     path=path,
-        #     xref="paper", yref="paper",
-        #     line=dict(color="black", width=2),
-        #     layer="above"
-        # )
-        fig.add_shape(
-            type="rect",
-            x0=0, y0=0, x1=1, y1=1,  # full subplot area
-            xref="paper", yref="paper",  # <- use paper coords
-            line=dict(color="black", width=2),
-            fillcolor="rgba(0,0,0,0)",
-            layer="above",
-        )
-
-        
-        w, h = 360, 240
+        w, h = 280, 200
         get_figures_dir().mkdir(parents=True, exist_ok=True)
         fig.write_image(str(get_figures_dir() / f"{task_name}_agents.pdf"), width=w, height=h)
 
         # fig.show()
+
+
+    def create_scatter_plots(self, dfs, benchmark_task_names, methods):
+        # scatter lines
+        # there is only one df in dfs
+        df = dfs[0]
+        # need to create two lines one for mlp and one for tf, with x-vals as
+        x_vals = [0, 10000, 30000, 50000]
+        
+        y1_vals_names = ['Mlp', 'Mlp-ft10', 'Mlp-ft30', 'Mlp-ft50']
+        y2_vals_names = ['Tf', 'Tf-ft10', 'Tf-ft30', 'Tf-ft50']
+        
+        colors = get_colors(task='reach', metric='zs')
+        colors = [seaborn_color_to_rgb_string(color) for color in colors]
+        
+        y1_mus = [df.loc[name, ('ZS', 'mean')] for name in y1_vals_names]
+        y1_stds = [df.loc[name, ('ZS', 'std')] for name in y1_vals_names]
+
+        y2_mus = [df.loc[name, ('ZS', 'mean')] for name in y2_vals_names]
+        y2_stds = [df.loc[name, ('ZS', 'std')] for name in y2_vals_names]
+        
+        y_mus = [y1_mus, y2_mus]
+        y_stds = [y1_stds, y2_stds]
+        
+        
+        fig = go.Figure()
+        
+        for idx, method in enumerate(['Mlp', 'Tf']):
+            fig.add_trace(
+                go.Scatter(
+                    x=x_vals,
+                    y=y_mus[idx],
+                    error_y=dict(type='data',
+                                 array=y_stds[idx],
+                                 thickness=0.75,
+                                 color='black',
+                                 visible=True),
+                    mode='lines+markers',
+                    name=method,
+                    line=dict(color=colors[idx], width=2),
+                    marker=dict(size=TRACE_FONT_SIZE),
+                    text=[f"{m:.2f} ± {s:.3f}" if s is not None else f"{m:.2f}" for m, s in zip(y_mus[idx], y_stds[idx])],
+                )
+            )
+            
+        fig.update_traces(textfont_size=TRACE_FONT_SIZE, textposition='top center') #, cliponaxis=False)
+        fig.update_layout(
+            title_text=benchmark_task_names[0],
+            xaxis_title="# Fine-tuning Steps",
+            yaxis_title="Average ZS Score",
+            plot_bgcolor="white",
+            showlegend=True,
+            legend=dict(
+                x=1.0,  # Position the legend to the right of the plot
+                y=1.0,  # Align the legend to the top
+                xanchor="right",  # Anchor the legend's x position to the left
+                yanchor="bottom",  # Anchor the legend's y position to the top
+                font=dict(size=LEGEND_FONT_SIZE),  # Set font size for the legend
+                bgcolor="rgba(255, 255, 255, 0.0)",  # Set a semi-transparent background for the legend
+                orientation="h",
+            ),
+        )
+        fig.update_yaxes(showline=True, linecolor='lightgray', gridcolor='lightgray', zeroline=True, zerolinecolor='black', zerolinewidth=1)
+        fig.update_xaxes(tickfont=dict(size=TRACE_FONT_SIZE))
+        fig.update_yaxes(tickfont=dict(size=TRACE_FONT_SIZE))
+        
+        yaxis_dict = {
+            "zeroline": True,             # Enable the zero line
+            "zerolinewidth": 2,        # Set the width of the zero line
+            "zerolinecolor": 'black',      # Set the color of the zero line
+            'range': [0.0, None],
+        }
+        fig.update_yaxes(yaxis_dict)
+        fig.update_xaxes(dict(tickmode='array', tickvals=x_vals, ticktext=[str(x) for x in x_vals]))
+        
+        return fig
+    
 
     def create_grouped_bargraphs(self, dfs, benchmark_task_names, methods, metric="mt", category="cat", task='reach', show_y_ticks=True, std_scale=1.0):
         # methods = dfs[0].index.tolist()
@@ -414,7 +492,8 @@ class SubplotVisualizer:
 
     # def create_scatter_plots3(self, dfs, metric_sets, names, relative, category="cat"):
 
-    def create_subplots_bar(self, legend=True, metric="mt", methods=['Mlp', 'Tf'], relative=False, group_indices=[0, 4, 6], task="reach", big=True, remove_group=None):
+    def create_subplots_bar(self, legend=True, metric="mt", methods=['Mlp', 'Tf'], relative=False, group_indices=[0, 4, 6], task="reach", big=True, remove_group=None,
+                            scatter=False):
         category_names = ["Interpolation", "Composition", "Extrapolation"]
         
         if remove_group is not None:
@@ -457,11 +536,14 @@ class SubplotVisualizer:
             dfs = self.dataframes[start_idx:end_idx[subpplot_idx]]
             names = self.names[start_idx:end_idx[subpplot_idx]]
             
-            
-            grouped_fig = self.create_grouped_bargraphs(dfs, names, methods, metric=metric, 
+            if scatter:
+                grouped_fig = self.create_scatter_plots(dfs, names, methods)
+            else:
+                grouped_fig = self.create_grouped_bargraphs(dfs, names, methods, metric=metric, 
                                                         task=task,
                                                         category=category_names[subpplot_idx],
                                                         show_y_ticks=(subpplot_idx == 0), std_scale=std_scale)
+            
             # Add traces to the subplot
             for trace in grouped_fig.data:
                 # Hide the legend for all subplots except the first one
@@ -502,12 +584,15 @@ class SubplotVisualizer:
             yaxis2=yaxis_dict,
             margin=dict(l=1, r=1, t=1, b=30),  # Remove margins
         )
+            
         # Update all x- and y-axes at once
         fig.update_yaxes(gridcolor='lightgray', gridwidth=1, griddash='dot')
         fig.update_yaxes(range=[0, None])
         # fig.update_traces(textfont_size=TRACE_FONT_SIZE) #, cliponaxis=False)
         fig.update_xaxes(tickfont=dict(size=TRACE_FONT_SIZE))
         fig.update_yaxes(tickfont=dict(size=TRACE_FONT_SIZE))
+        
+
 
         if n_cols == 3:
             fig.update_layout(
@@ -533,6 +618,47 @@ class SubplotVisualizer:
         print("Saved figure to", fig_path)
         # fig.show()
         return fig
+    
+    def create_finetuning_scatter_plot(self, *args, **kwargs):
+        fig = self.create_subplots_bar(*args, **kwargs, scatter=True)
+        # add labels for subplots
+        names = ['Panda', 'EE-Arm', 'Arms']
+
+        xpositions = [0.47, 0.5, 0.55]
+        # manually add subtitles
+        for i in range(3):
+            fig.add_annotation(
+                x=xpositions[i],
+                y=-0.2,
+                xref='x domain' if i == 0 else ('x2 domain' if i == 1 else 'x3 domain'),
+                yref='y domain',
+                text=names[i],
+                showarrow=False,
+                font=dict(size=TRACE_FONT_SIZE),
+                align='center'
+            )
+            
+        fig.update_layout(
+            margin=dict(l=1, r=1, t=1, b=30),  # Remove margins
+        )
+        
+        # add x-ticks at 0, 10k, 30k, 50k
+        fig.update_xaxes(dict(tickmode='array', tickvals=[0, 10000, 30000, 50000], ticktext=['0', '10k', '30k', '50k']))
+        
+        fig.update_xaxes(tickfont=dict(size=TRACE_FONT_SIZE))
+        fig.update_yaxes(tickfont=dict(size=TRACE_FONT_SIZE))
+
+        pdf_width_in = 6.0
+        pdf_height_in = 3.0
+        dpi = 60
+        fig_width = int(pdf_width_in * dpi)
+        fig_height = int(pdf_height_in * dpi)
+        get_figures_dir().mkdir(parents=True, exist_ok=True)
+        fig_path = str(get_figures_dir() / f"finetuning_scatter.pdf")
+        fig.write_image(fig_path, width=fig_width, height=fig_height)
+        print("Saved figure to", fig_path)
+        return fig
+
     
     
     def add_category_legend(self, fig):
@@ -574,7 +700,7 @@ class SubplotVisualizer:
         colors = [
             sns.color_palette("GnBu")[-1],
             sns.color_palette("BuGn")[-1],
-            sns.color_palette('Oranges')[-1]
+            sns.color_palette('Oranges_d')[-1]
         ]
         colors = [seaborn_color_to_rgb_string(color) for color in colors]
         layout = fig['layout']
@@ -605,6 +731,33 @@ class SubplotVisualizer:
                     x0=layout['xaxis3']['domain'][0], x1=layout['xaxis3']['domain'][1],
                     y0=layout['yaxis3']['domain'][0], y1=layout['yaxis3']['domain'][1],
                     line=dict(color=colors[2], width=2)
+                ),
+            ]
+        )
+        
+
+    def draw_bounding_box_individual(self, fig):
+        # Draw bounding boxes around figure
+        # there are no subplots only a single figure
+        # colors = sns.color_palette("Paired")[:6][::2]
+        colors = [
+            sns.color_palette("GnBu")[-1],
+        ]
+        colors = [seaborn_color_to_rgb_string(color) for color in colors]
+        color = colors[0]
+        
+        # Draw a rectangle around the **full data area**
+        fig.update_layout(
+            shapes=[
+                dict(
+                    type="rect",
+                    xref="x",  # data coordinates
+                    yref="y",
+                    x0=-0.5,
+                    x1=5.5,
+                    y0=0.0,  # start of y-axis
+                    y1=0.35,
+                    line=dict(color=color, width=2)
                 ),
             ]
         )

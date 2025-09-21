@@ -134,4 +134,23 @@ Evaluate multi-embodiment or fine-tuned policies on test morphologies of the ben
 python scripts/run.py --headless --enable_cameras OVERRIDE_CFGNAME experiment_cfgs/eval_zs.yaml EVAL_CHECKPOINT /path/to/agent.pt
 ```
 
+## Generating Runs
+To generate multiple training runs with different seeds or configurations, use the `scripts/train_utils/generate_run_commands.py` script. This script creates a bash script with the specified commands. You would need to modify the `slurm_script` and `project_dir` variables appropriately for your cluster. Benchmark argument can be either one of the benchmark tasks, or `all` to generate runs for all commands. `run_types` argument can be set to generate specific runs.
+```bash
+# generate runs for intra_simple_bot_reach task with high dimensional observations
+python scripts/train_utils/generate_run_commands.py --benchmark intra_simple_bot_reach --run_types mt-mlp_mt-tf_rand --high_dim
+```
+For generating evaluation runs, checkout the `generate_eval_commands.py` script, which has a similar interface. It reads the logs directory to find which checkpoints are available. You may need to set the `logs_dir` variable in the script appropriately to where the logs exist. 
 
+
+## 📊 Plotting
+The `anybody/global_cfgs/experiment_names.py` file contains the mappings of the experiment names to the benchmark tasks (which are also the wandb project names), as per the naming convention used by the `scripts/run.py` script for the runs. The plot script uses this mapping to read from wandb the projects with the specified runs. The utils file in `anybody/utils`: (a) `wandb_utils_v2.py` contains functions to read from wandb, and (b) `plot_utils_v2.py` contains functions to plot the results.
+To plot the results, use the following command:
+
+```bash
+python scripts/train_utils/generate_plots.py --task push
+python scripts/train_utils/generate_plots.py --task reach 
+python scripts/train_utils/generate_plots.py --task ablation
+python scripts/train_utils/generate_plots.py --task reach-ft
+```
+This will uses the wandb API to read the runs, and cache the dataframes. To re-fetch the data from wandb, use `--force` flag. 

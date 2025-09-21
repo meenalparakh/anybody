@@ -89,17 +89,27 @@ if __name__ == "__main__":
         visualizer.create_per_task_bargraphs(
             df=all_dfs[0], task_name=all_names[0], methods=method_names
         )
+    elif "ft" in args.task:
+        visualizer.create_finetuning_scatter_plot(
+            metric="zs",
+            legend=args.legend,
+            methods=method_names,
+            group_indices=group_indices,
+            task=args.task,
+            big=False,
+            remove_group=None,
+        )
+
     else:
-        if "ft" not in args.task:
-            visualizer.create_subplots_bar(
-                metric="mt",
-                legend=args.legend,
-                methods=method_names,
-                group_indices=group_indices,
-                task=args.task,
-                big=False,
-                remove_group=None,
-            )
+        visualizer.create_subplots_bar(
+            metric="mt",
+            legend=args.legend,
+            methods=method_names,
+            group_indices=group_indices,
+            task=args.task,
+            big=False,
+            remove_group=None,
+        )
         visualizer.create_subplots_bar(
             metric="zs",
             legend=args.legend,
@@ -108,4 +118,5 @@ if __name__ == "__main__":
             task=args.task,
             big=False,
             remove_group=None,
+            scatter=False
         )
